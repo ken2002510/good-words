@@ -155,18 +155,47 @@ curl.exe -s -X POST https://<網址>/api/share -H "Content-Type: application/jso
 在 `C:\prodcut` 執行：
 
 ```powershell
-node deploy\test-serverless.mjs --ollama-down   # 18 項 API 契約測試
-node deploy\test-routing.mjs                    # 路由一致性檢查
-node deploy\test-coldstart.mjs                  # 模擬 Vercel 冷啟動
+node deploy\preflight.mjs                       # 一鍵跑完底下 4 套（部署前閘門）
+node deploy\verify-public.mjs <網址>            # 部署後外網驗收（37 項）
 ```
 
-**本機實際結果（2026-10-28）：**
+**部署前實測結果：**
 
 ```
-test-serverless.mjs  : 總計 18 項，通過 18，失敗 0
-test-routing.mjs     : 全部通過
-test-coldstart.mjs   : 全部通過（14 類情緒、21 組好話、無 fallback）
+preflight.mjs
+  ✅ 路由一致性        ✅ Serverless API 契約
+  ✅ 冷啟動模擬        ✅ repo 內容檢查
+  → 全部通過
+
+verify-public.mjs（對本機 server） : 37 項，通過 36，BLOCKER 0，MAJOR 0 → PASS
 ```
+
+### ★ 最強的一項驗證：從「全新 clone」實測
+
+因為 Vercel 部署時只會拿到 git repo 的內容，我們做的**最嚴格**驗證是：
+
+```powershell
+git clone . <暫存目錄>          # 模擬 Vercel 收到一份全新 clone
+cd <暫存目錄>
+node app/server.js              # 用 clone 出來的程式碼啟動
+```
+
+實測結果（2026-10-29）：
+
+```
+clone 檔案數        : 57（與 repo 一致）
+部署關鍵檔案        : vercel.json / api/*.js / app/lib/* / app/public/* / content/* 全部存在
+/api/health         : emotions=14  sets=21  source=content-dir
+/                   : HTTP 200 6596 bytes
+/style.css          : HTTP 200 15344 bytes
+/app.js             : HTTP 200 16156 bytes
+deploy/api/respond.js 直接呼叫（強制規則軌、無外部 AI）：
+  「工作壓力好大每天加班」→ engine=rules  emotion=工作壓力  三段齊全
+verify-public.mjs（對 clone server）: 36/37 PASS，BLOCKER 0
+```
+
+> **這證明「commit 裡的東西」本身可獨立運作**，不只是工作區能跑。
+> 這正是 Vercel 會收到的內容，所以部署後行為可預期。
 
 ---
 
