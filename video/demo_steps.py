@@ -96,6 +96,9 @@ def load_beats() -> dict:
 
 
 BEATS = load_beats()
+
+# 起始網址（由 record_demo.py 設定；不能依賴 page.url，新分頁是 about:blank）
+ENTRY_URL = {"url": "http://127.0.0.1:3210/"}
 # 錄影期間累積的「已停留秒數」，用來把節奏撐到 demo_total
 _STATE = {"elapsed": 0.0, "marks": {}}
 
@@ -140,7 +143,10 @@ def run(page, ui, log) -> None:
     # A. 首頁（乾淨、無個資）--------------------------------------------
     # ==================================================================
     log("A. 首頁")
-    page.goto(page.url.split("#")[0], wait_until="domcontentloaded")
+    # 注意：新開的 page.url 是 about:blank，不能用它當導覽目標。
+    # 由 record_demo.py 傳入真正的起始網址。
+    page.goto(ENTRY_URL["url"], wait_until="domcontentloaded")
+    page.wait_for_selector("#input", state="visible", timeout=20000)
     hold(page, 4.0)
     slow_scroll(page, 260, steps=14)
     hold(page, 2.5)

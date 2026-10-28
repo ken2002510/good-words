@@ -21,8 +21,15 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Windows 主控台預設 cp950，印出 ✓ ✗ 會炸。強制 UTF-8。
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 HERE = Path(__file__).resolve().parent
-VIDEO_DIR = HERE.parent
+VIDEO_DIR = HERE          # qa_check.py 就在 video/ 底下，成品在 video/out/
 QA = HERE
 FRAMES = QA / "frames"
 FRAMES.mkdir(parents=True, exist_ok=True)

@@ -174,25 +174,35 @@ def main() -> int:
             continue
         idx = 3 + i
         tag = f"c{i}"
+        # 第一張字卡（q_self）從 0 秒就開始 → **不能淡入**，
+        # 否則影片開頭 0.6s 會是純底色（抽幀會看到一張全空畫面）。
+        fade_in = "" if a <= 0.01 else f"fade=t=in:st={a:.3f}:d=0.6:alpha=1,"
         f.append(
             f"[{idx}:v]format=rgba,"
-            f"fade=t=in:st={a:.3f}:d=0.6:alpha=1,"
+            f"{fade_in}"
             f"fade=t=out:st={max(a, b-0.6):.3f}:d=0.6:alpha=1,"
             f"setpts=PTS-STARTPTS+{a:.3f}/TB[{tag}]"
         )
         f.append(f"[{cur}][{tag}]overlay=0:0:eof_action=pass:enable='between(t,{a:.3f},{b:.3f})'[v{tag}]")
         cur = f"v{tag}"
 
-    # 字幕燒在底部
+    # 字幕：固定在最底部的專屬橫帶，並加一層半透明底，
+    # 避免和字卡的文字重疊（先前抽幀看到字幕蓋在字卡文字上）。
     srt = AUDIO / "subtitles.srt"
     shifted = AUDIO / "subtitles_shifted.srt"
     _shift_srt(srt, shifted, head_pad)
     esc = str(shifted).replace("\\", "/").replace(":", "\\:")
+    band_h = 190                          # 字幕橫帶高度
+    band_y = H - band_h
     f.append(
-        f"[{cur}]subtitles='{esc}':"
-        f"force_style='FontName=Microsoft JhengHei,FontSize=13,"
+        f"[{cur}]drawbox=x=0:y={band_y}:w={W}:h={band_h}:"
+        f"color=0x120E0C@0.82:t=fill[vband]"
+    )
+    f.append(
+        f"[vband]subtitles='{esc}':"
+        f"force_style='FontName=Microsoft JhengHei,FontSize=15,"
         f"PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1,"
-        f"Outline=2,Shadow=0,Alignment=2,MarginV=48'[vout]"
+        f"Outline=2,Shadow=0,Alignment=2,MarginV=34'[vout]"
     )
 
     cmd += [
