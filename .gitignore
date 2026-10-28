@@ -1,0 +1,97 @@
+# ---- Node ----
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.pnpm-store/
+
+# ---- Vercel ----
+.vercel/
+.env
+.env.*
+!.env.example
+
+# ---- 影片（大檔，不上傳 GitHub）----
+video/out/
+video/qa/frames/
+*.mp4
+*.mov
+*.mkv
+*.wav
+*.mp3
+
+# ---- Playwright/Chromium 錄影用 profile（快取可達數 MB，絕不可進 repo）----
+video/chrome-profile/
+video/**/chrome-profile/
+**/chrome-profile/
+**/BrowserMetrics/
+**/ShaderCache/
+**/GPUCache/
+
+# ---- 官方文件與內部作業文件（含學校名稱／承辦資訊，不可公開）----
+# BRIEF 是全隊契約，但不是給評審看的公開文件 → 不進 public repo
+00-PROJECT-BRIEF.md
+00-official/
+content/verify_files.py
+content/lint_content.py
+app/test/_diag.js
+
+# ---- 切結書產製腳本與報名指引（含主辦單位名稱／承辦人資訊）----
+# 理由：切結書正文必須「此致 主辦單位：<校名>」，且含承辦人姓名與電話。
+#   這些是官方範本內容（非參賽者個資），但放在 public repo 等於公開揭露
+#   與本作品相關的學校／單位資訊 —— BRIEF §8 的紅線寧可從嚴。
+#   切結書是「交給使用者的文件」，不是「公開展示的成品」，本來就不需要進 public repo。
+#   （檔案仍在磁碟上，只是不上傳；使用者照常可以簽名繳交。）
+docs/build_undertaking.py
+docs/verify_undertaking.py
+docs/線上報名填寫指南.md
+docs/*undertaking*
+docs/*切結書*
+docs/*報名*
+
+# ---- 內部除錯暫存 ----
+app/test/_diag.js
+deploy/lint_probe*.mjs
+
+# ---- 測試截圖（~550KB，且可能含瀏覽器狀態／測試資料）----
+# 匿名性紅線：截圖可能拍到書籤列、通知、使用者名稱 → 一律不進 public repo
+app/test/screenshots/
+**/screenshots/
+*.png
+*.jpg
+*.jpeg
+*.webp
+# 例外：若日後有真正要公開的插圖，用 ! 明確放行
+!docs/assets/**
+!app/public/**/*.png
+
+# ---- Python / Playwright 中間產物 ----
+__pycache__/
+*.pyc
+*.pyo
+video/ui_dump.json
+video/raw/
+qa/_t.json
+**/ui_dump.json
+**/*_timing.json
+
+# ---- 測試與品質報告的暫存輸出（保留最終報告 .md）----
+qa/*.json
+qa/**/*.json
+video/qa/*.json
+
+# ---- 暫存 / 產出 ----
+tmp/
+temp/
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- 交付文件的中間產物（保留 .docx/.pdf 成品）----
+docs/~$*
+docs/*.tmp
+*.pdf.tmp
+
+# ---- 本機探測腳本 ----
+_probe_*.mjs

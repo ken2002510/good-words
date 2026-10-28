@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="把說不出口的心事寫下來，先被接住，再拿到一句具體、真誠、可以說出口的好話。免登入、不儲存、不上傳。">
+<!-- 匿名性：無作者、無單位、無 logo、無追蹤碼（BRIEF §8） -->
+<meta name="robots" content="noindex">
+<title>好好說話 — 先接住你，再給你一句好話</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#127807;</text></svg>">
+</head>
+<body>
+
+<a class="skip" href="#write">直接跳到輸入區</a>
+
+<header class="top">
+  <div class="wrap top-inner">
+    <h1 class="brand">好好說話</h1>
+    <button id="btn-favorites" class="icon-btn" type="button" aria-expanded="false" aria-controls="fav-panel">
+      <span aria-hidden="true">♡</span>
+      <span class="icon-btn-label">收藏</span>
+      <span id="fav-count" class="badge" hidden>0</span>
+    </button>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+
+  <!-- ① 輸入區 -->
+  <section class="card intro" id="write">
+    <h2 class="intro-title">把心裡的話寫下來，不用修飾。</h2>
+    <p class="intro-sub">寫錯字沒關係、講不清楚也沒關係。<strong>不會被評價，也不會被記錄。</strong></p>
+
+    <form id="form" autocomplete="off">
+      <label class="sr-only" for="input">你的心事</label>
+      <textarea id="input" name="text" rows="5" maxlength="2000"
+        placeholder="例如：今天開會我講錯話，回家路上一直想，覺得自己很沒用。"
+        aria-describedby="input-hint"></textarea>
+
+      <div class="row-between">
+        <span id="input-hint" class="hint">不用寫完整，一句話也可以</span>
+        <span id="counter" class="hint counter">0 / 2000</span>
+      </div>
+
+      <div class="chips" role="group" aria-label="不知道怎麼開始？試試這些">
+        <span class="chips-label">不知道怎麼開始：</span>
+        <button class="chip" type="button" data-fill="最近工作上一直出錯，我覺得自己很沒用。">工作</button>
+        <button class="chip" type="button" data-fill="他已經三天沒回我訊息了，我一直想是不是我做錯了什麼。">感情</button>
+        <button class="chip" type="button" data-fill="每次回家都要被問什麼時候結婚，我真的很累。">家庭</button>
+        <button class="chip" type="button" data-fill="身邊很多人，可是沒有一個人真的懂我。">孤單</button>
+      </div>
+
+      <button id="btn-submit" class="primary" type="submit">
+        <span class="btn-text">說出來，讓它被接住</span>
+        <span class="spinner" hidden aria-hidden="true"></span>
+      </button>
+
+      <p class="privacy">
+        🔒 免登入 · 不儲存對話 · 心事不會離開你的裝置<sup>*</sup>
+      </p>
+    </form>
+  </section>
+
+  <!-- ② 危機模式（BRIEF §6）——不經過一般流程 -->
+  <section id="crisis" class="card crisis" hidden aria-live="assertive" tabindex="-1">
+    <h2 class="crisis-title">你願意說出來，這件事很重要。</h2>
+    <p id="crisis-lead" class="crisis-lead"></p>
+    <ul class="hotlines" id="hotlines"></ul>
+    <p class="crisis-note">
+      我不會假裝我懂你全部的感覺，也不會給你危機處理的建議 —— 那需要真人。
+      現在只要做一件事：挑一個號碼撥出去。接通後不用整理好措辭，說「我不知道從哪說起」就可以了。
+    </p>
+  </section>
+
+  <!-- ③ 好話卡片 -->
+  <section id="result" class="card result" hidden aria-live="polite">
+
+    <div id="loading" class="loading" hidden>
+      <div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
+      <p id="loading-text">正在聽你說話…</p>
+    </div>
+
+    <div id="result-body" hidden>
+      <div class="emotion-row">
+        <span class="emotion-label">我聽到的是</span>
+        <span id="emotion-tag" class="emotion-tag"></span>
+        <span id="emotion-intensity" class="intensity" title="情緒強度"></span>
+      </div>
+      <p id="emotion-situation" class="situation"></p>
+      <p id="emotion-alts" class="alts" hidden></p>
+
+      <div class="segments">
+        <div class="segment seg-accept">
+          <div class="seg-head"><span class="seg-num">1</span><span>承接</span></div>
+          <p id="seg-accept" class="seg-text"></p>
+        </div>
+        <div class="segment seg-good">
+          <div class="seg-head"><span class="seg-num">2</span><span>好話</span></div>
+          <p id="seg-good" class="seg-text quote"></p>
+        </div>
+        <div class="segment seg-step">
+          <div class="seg-head"><span class="seg-num">3</span><span>小步 · 今晚做一件就好</span></div>
+          <p id="seg-step" class="seg-text"></p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="act" type="button" data-act="copy">
+          <span aria-hidden="true">⧉</span> 複製這句
+        </button>
+        <button class="act" type="button" data-act="fav">
+          <span aria-hidden="true">♡</span> <span id="fav-btn-label">收藏</span>
+        </button>
+        <button class="act act-primary" type="button" data-act="share">
+          <span aria-hidden="true">↗</span> 轉送給別人
+        </button>
+      </div>
+
+      <p id="engine-note" class="engine-note"></p>
+    </div>
+
+    <!-- 轉送面板 -->
+    <div id="share-panel" class="share-panel" hidden>
+      <h3 class="share-title">把這句話，送給一個你想到的人</h3>
+      <div class="seg-tabs" role="tablist" aria-label="收件對象">
+        <button role="tab" class="seg-tab is-on" data-audience="friend" aria-selected="true">給朋友</button>
+        <button role="tab" class="seg-tab" data-audience="family" aria-selected="false">給家人</button>
+        <button role="tab" class="seg-tab" data-audience="colleague" aria-selected="false">給同事</button>
+      </div>
+      <pre id="share-text" class="share-text"></pre>
+      <div class="actions">
+        <button class="act act-primary" type="button" data-act="copy-share">⧉ 複製轉送版</button>
+        <button class="act" type="button" data-act="close-share">收起來</button>
+      </div>
+      <p class="hint">轉送不需要對方也使用這個網站，複製貼上就好。</p>
+    </div>
+  </section>
+
+  <!-- ④ 收藏清單 -->
+  <section id="fav-panel" class="card fav-panel" hidden aria-label="我的收藏">
+    <div class="row-between">
+      <h2 class="fav-title">我的收藏</h2>
+      <button class="link-btn" type="button" data-act="clear-fav">清空</button>
+    </div>
+    <p class="hint">只存在這台裝置的瀏覽器裡，不會上傳。</p>
+    <ul id="fav-list" class="fav-list"></ul>
+    <p id="fav-empty" class="hint">還沒有收藏。按好話卡片上的「♡ 收藏」就會收在這裡。</p>
+  </section>
+
+  <!-- 頁尾：免責 + 匿名（無任何個資） -->
+  <footer class="foot">
+    <p><strong>好好說話</strong> 是一個陪伴工具，不是醫療或諮商服務，也不做任何診斷。</p>
+    <p>如果你有立即的危險，請撥 <a href="tel:119">119</a> 或 <a href="tel:110">110</a>；想找人說話，撥 <a href="tel:1925">1925</a>（24 小時免付費）。</p>
+    <p class="foot-fine">
+      * 本機版本：心事送到你自己電腦上的 AI 模型處理，不會上傳到雲端。
+      若站方部署為雲端版本，會改用不保存內容的推論服務。
+    </p>
+  </footer>
+
+</main>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="/app.js"></script>
+</body>
+</html>

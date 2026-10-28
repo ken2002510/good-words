@@ -1,0 +1,17 @@
+# 測試產物：截圖只是人工複核的證據，不需要進版控（每次跑 test/mobile-check.js 會重新產生）
+test/screenshots/
+
+# 依賴（本專案設計為零依賴，這裡是保險）
+node_modules/
+
+# 環境變數：本機 AI 設定不進版控
+.env
+.env.local
+
+# 作業系統雜項
+.DS_Store
+Thumbs.db
+
+# 日誌
+*.log
+npm-debug.log*

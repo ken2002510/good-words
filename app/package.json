@@ -1,0 +1,18 @@
+{
+  "name": "hao-hao-shuo-hua",
+  "version": "1.0.0",
+  "private": true,
+  "description": "《好好說話》— 先接住情緒，再給一句具體、真誠、可以說出口的好話。零外部依賴。",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node test/run-tests.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
