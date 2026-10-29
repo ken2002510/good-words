@@ -47,18 +47,40 @@ console.log('\n=== 前端 API 呼叫 vs 實際 handler ===');
 const appJs = fs.readFileSync(path.join(ROOT, 'app', 'public', 'app.js'), 'utf8');
 const calledApis = [...new Set([...appJs.matchAll(/['"`](\/api\/[a-zA-Z0-9_\/-]+)['"`]/g)].map((m) => m[1]))];
 
+/**
+ * ★ 為什麼要有「兩套入口」
+ *
+ * 線上實測（2026-10-29）顯示 Vercel 認定的專案根目錄是 `app/`，不是 repo 根：
+ *     GET /index.html              → 200
+ *     GET /app/public/index.html   → 404   ← 若服務 repo 根，這應該 200
+ *     GET /package.json            → 404
+ *     GET /content/emotions.json   → 404
+ * 在該前提下，放在 **repo 根** 的 `api/` 完全落在 Vercel 專案範圍之外 →
+ * `/api/*` 全部 404。
+ *
+ * 因此我們在兩個可能的位置**都**放入口，讓 api/ 一定落在 Vercel 的視野內，
+ * 不依賴任何偵測邏輯，也不需要使用者進後台改 Root Directory。
+ * 兩邊都只是轉發，實作仍只有一份（deploy/api/）。
+ */
 for (const api of calledApis) {
   const name = api.replace(/^\/api\//, '').split('/')[0];
-  const entry = path.join(ROOT, 'api', `${name}.js`);          // Vercel 原生入口
+  const entries = [
+    { label: 'api/', file: path.join(ROOT, 'api', `${name}.js`), implRel: 'deploy/api/' },
+    { label: 'app/api/', file: path.join(ROOT, 'app', 'api', `${name}.js`), implRel: '../../deploy/api/' },
+  ];
   const impl = path.join(ROOT, 'deploy', 'api', `${name}.js`); // 單一事實來源
-  check(`${api} → api/${name}.js 入口存在`, fs.existsSync(entry), fs.existsSync(entry) ? '' : '缺少入口！');
+
   check(`  ${api} → deploy/api/${name}.js 實作存在`, fs.existsSync(impl), fs.existsSync(impl) ? '' : '缺少實作！');
 
-  // 入口必須真的轉發到實作（避免入口是空殼）
-  if (fs.existsSync(entry)) {
-    const src = fs.readFileSync(entry, 'utf8');
-    check(`  ${api} 入口有轉發到實作`, src.includes(`deploy/api/${name}.js`));
+  for (const e of entries) {
+    check(`${api} → ${e.label}${name}.js 入口存在`, fs.existsSync(e.file),
+      fs.existsSync(e.file) ? '' : '缺少入口！');
+    if (fs.existsSync(e.file)) {
+      const src = fs.readFileSync(e.file, 'utf8');
+      check(`  ${e.label} 入口轉發到實作`, src.includes(`${e.implRel}${name}.js`));
+    }
   }
+
   // 不該有 /api/* 的 rewrite（API 走原生 api/ 目錄，這條風險路徑要完全避開）
   // 注意：/app.js 這種「靜態資產 rewrite」是合法的，不算違規，所以只檢查 /api/ 開頭。
   check(`  ${api} 未依賴 rewrite 派發`, !rewrites.some((r) => r.source?.startsWith('/api')));
@@ -94,11 +116,38 @@ for (const fpath of Object.keys(v.functions || {})) {
 }
 
 // ── 5. 每個 handler 都必須有 functions 設定（避免用預設慢設定）──
+//    ★ 兩套入口（repo 根 api/ 與 app/api/）都要有，因為不知道 Vercel 會用哪個當專案根。
 console.log('\n=== 所有 handler 都有 functions 設定 ===');
-const apiDir = path.join(ROOT, 'api');
-for (const f of fs.readdirSync(apiDir).filter((x) => x.endsWith('.js'))) {
-  const key = `api/${f}`;
-  check(`${key} 已設定 maxDuration`, !!v.functions[key], v.functions[key] ? `${v.functions[key].maxDuration}s` : '未設定');
+for (const dir of ['api', path.join('app', 'api')]) {
+  const full = path.join(ROOT, dir);
+  if (!fs.existsSync(full)) continue;
+  for (const f of fs.readdirSync(full).filter((x) => x.endsWith('.js') && !x.startsWith('_'))) {
+    const key = `${dir.replace(/\\/g, '/')}/${f}`;
+    check(`${key} 已設定 maxDuration`, !!v.functions[key],
+      v.functions[key] ? `${v.functions[key].maxDuration}s` : '未設定');
+  }
+}
+
+// ── 6. content-inline 同步檢查（雲端語料的唯一可靠來源）──
+console.log('\n=== content-inline 同步 ===');
+const inlinePath = path.join(ROOT, 'app', 'lib', 'content-inline.js');
+check('app/lib/content-inline.js 存在（雲端語料來源）', fs.existsSync(inlinePath),
+  fs.existsSync(inlinePath) ? `${fs.statSync(inlinePath).size} bytes` : '缺少！雲端會拿不到語料');
+if (fs.existsSync(inlinePath)) {
+  const { createRequire } = await import('node:module');
+  const inl = createRequire(import.meta.url)(inlinePath);
+  check('  內嵌語料含 4 個檔案',
+    !!inl.emotions && !!inl.goodwords && !!inl.crisis && !!inl.shareTemplates,
+    `emotions=${Array.isArray(inl.emotions) ? inl.emotions.length : '?'} sets=${Object.keys(inl.goodwords || {}).length}`);
+  // 與 content/ 是否同步
+  try {
+    const emotionsDisk = JSON.parse(fs.readFileSync(path.join(ROOT, 'content', 'emotions.json'), 'utf8').replace(/^\uFEFF/, ''));
+    check('  內嵌語料與 content/ 同步',
+      JSON.stringify(inl.emotions) === JSON.stringify(emotionsDisk),
+      '若不同步請跑 node deploy/sync-content-inline.mjs');
+  } catch (e) {
+    check('  可讀取 content/emotions.json 以比對', false, String(e.message));
+  }
 }
 
 console.log(`\n${'='.repeat(56)}`);

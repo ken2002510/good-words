@@ -4,6 +4,65 @@
 > 讓評審期間（115.12.01–12.15）連結**一直活著、一直能用**。
 >
 > 全程 **$0**，不需要伺服器、不需要資料庫、不需要信用卡。
+>
+> **✅ 已上線：<https://good-words.vercel.app>（2026-10-29，外網驗收 40/40 PASS）**
+
+---
+
+## ⚠️ 0. 先讀：四個會讓部署失敗的陷阱（實測換來的）
+
+這份指南的其餘部分是「怎麼做」；這一節是「**為什麼會做不成**」。
+這四點各讓這次部署多花了一輪，全部是實測結果，不是推測。
+
+### ① Vercel 的「專案根目錄」是 `app/`，不是 repo 根
+```
+GET /index.html              → 200   ✅
+GET /app.js                  → 200   ✅
+GET /app/public/index.html   → 404   ← 若服務 repo 根，這應該 200
+GET /package.json            → 404   ← repo 根的檔案取不到
+GET /content/emotions.json   → 404
+GET /vercel.json             → 404
+```
+→ 靜態服務的根是 `app/public/`，**而 Vercel 認定的專案根是 `app/`**
+（因為 `app/package.json` 存在）。
+→ **放在 repo 根的 `api/` 完全在專案範圍之外，永遠不會被編譯成 function。**
+→ **這就是為什麼「改 `vercel.json` 怎麼改都沒用」** —— 問題不在設定，在專案範圍。
+
+**對策**：serverless 入口放 `app/api/`（本專案兩邊都放，`vercel.json` 也兩邊都宣告，作為保險）。
+
+### ② `content/` 不在 Vercel 專案範圍內 → 語料必須內嵌
+從 `app/` 內部寫 `require('../../content/emotions.json')`：
+- **本機可行**（content/ 就在旁邊）
+- **雲端 `MODULE_NOT_FOUND`** → function 直接崩潰
+
+這是「**本機全綠 ≠ 雲端可用**」的典型陷阱。
+
+**對策**：
+```powershell
+node deploy\sync-content-inline.mjs          # 產生 app/lib/content-inline.js
+node deploy\sync-content-inline.mjs --check  # 檢查是否同步（不同步 exit 1）
+```
+`content/` 仍是唯一事實來源；內嵌檔由腳本產生、一起進版控，不會漂移。
+**★ 改完 `content/` 一定要重跑這支，否則雲端語料不會更新。**
+
+### ③ 判斷部署成功必須測 API，不能只看首頁
+首頁 200、CSS 200、JS 200 —— **看起來完全正常，但 `/api/*` 可能全部 404**。
+那樣評審送出心事後永遠不會有回應，**比網站壞掉更糟**（會被判定「功能不完整」）。
+
+```powershell
+curl.exe -s -o NUL -w "%{http_code}" "https://good-words.vercel.app/api/health"
+# 必須 200。只看 / 是 200 不算通過。
+```
+
+### ④ 量線上資源要用 `curl` 精確位元組 + cache-bust
+- PowerShell `Invoke-WebRequest` 的 `.Content.Length` 會量到**錯誤大小**，
+  曾因此做出「部署內容與 repo 不符」的**錯誤結論**，白費一輪
+- `X-Vercel-Cache: HIT` 可能回舊內容 → 加 `?cb=<timestamp>` 再判斷
+
+```powershell
+curl.exe -s "https://good-words.vercel.app/?cb=$(Get-Date -UFormat %s)" -o out.html
+# 用位元組數或 sha256 比對，不要靠 HTTP client 的 Content.Length
+```
 
 ---
 
@@ -134,55 +193,61 @@ gh repo create good-words --public --source=. --push
 
 ## 4. 🔴 需要使用者登入：Vercel
 
-### 4.1 安裝 Vercel CLI
+### 4.1 ★ 建議做法：用 Vercel 網站的 Git 整合（本次實際採用）
+
+**這個方法不需要安裝任何 CLI、不需要 `vercel login`，也不需要把憑證交給任何人。**
+而且完成後每次 `git push` 都會自動重新部署 —— 對評審期間的長期存活最有利。
+
+1. 使用者登入 <https://vercel.com/signup>（**Continue with GitHub** 最省事）
+   - ⚠️ 務必選 **Hobby（免費）**，不要誤入 Pro（要收費）
+2. 開 <https://vercel.com/new>
+3. 選 **Import Git Repository** → 授權 GitHub → 選 `good-words`
+4. **Project Name 填 `good-words`** ← ★ 這決定公開網址，務必確認
+   - ⚠️ 若名稱已被占用而自動加後綴（如 `good-words-abc`），
+     **網址就會不同** → 要同步更新 `PUBLIC-LINK.md`
+5. **Framework Preset 選 `Other`**；**Root Directory 保持 `./`**；其他全部預設
+6. 按 **Deploy**，等約 1 分鐘
+
+完成後網址形如：
+
+```
+https://good-words.vercel.app
+```
+
+> 💡 **為什麼不用 CLI 部署**：CLI 需要 `vercel login` 產生**獨立於網頁登入的憑證**。
+> 本次使用者已在網頁登入，但 CLI 仍回報 `Logged out`
+> （`vercel whoami` → exit 1、"No existing credentials found"）。
+> 網頁登入與 CLI 登入是兩套憑證 —— 用 Git 整合可完全避開這個問題。
+
+### 4.2 （選用）CLI 部署
+
+只有在需要從命令列部署、或有自動化需求時才用：
 
 ```powershell
 npm i -g vercel
-vercel --version
-```
-
-若不想裝全域，可用 `npx vercel@latest` 取代底下所有 `vercel` 指令。
-
-### 4.2 登入（**由使用者本人完成**）
-
-```powershell
-cd C:\prodcut
-vercel login
-```
-
-會出現選單（Continue with GitHub / Google / Email…）。
-**請使用者自己選、自己在瀏覽器完成授權。** 部署者不代填任何帳密。
-
-> 💡 **建議用「Continue with GitHub」**：這樣 Vercel 直接連動剛才的 repo，
-> 之後每次 `git push` 都會自動重新部署。
->
-> ⚠️ 若使用者選擇用 Email 註冊，**請務必選 Hobby（免費）方案**，不要誤入 Pro（要收費）。
-
-### 4.3 首次部署
-
-```powershell
-cd C:\prodcut
+vercel login        # ← 由使用者本人在瀏覽器完成授權
 vercel --prod
 ```
 
-第一次會問幾個問題，**照這樣回答**：
+首次會問幾個問題：
 
 | 問題 | 回答 |
 |---|---|
 | Set up and deploy "C:\prodcut"? | `Y` |
-| Which scope? | 選使用者自己的帳號 |
+| Which scope? | 使用者自己的帳號 |
 | Link to existing project? | `N` |
-| What's your project's name? | `good-words`（或自訂，會成為網址一部分） |
-| In which directory is your code located? | `./` ← **直接 Enter** |
+| What's your project's name? | `good-words` |
+| In which directory is your code located? | `./`（直接 Enter） |
 | Want to modify these settings? | `N` |
 
-完成後會印出公開網址，像：
-
-```
-✅  Production: https://good-words-xxxx.vercel.app
-```
-
 **這就是要交給評審的公開 URL。** 記到 `PUBLIC-LINK.md`。
+
+### 4.3 部署後一定要確認網址正確
+
+```powershell
+curl.exe -s -o NUL -w "%{http_code}" "https://good-words.vercel.app/api/health"
+# 200 = 正確；404 = 見第 0 節的陷阱 ①
+```
 
 ---
 

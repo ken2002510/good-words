@@ -1,36 +1,74 @@
-# GO-LIVE.md — 部署執行清單（使用者登入後照做）
+# GO-LIVE.md — 部署執行清單與實戰紀錄
 
-> 內部執行文件（deployer 用）。使用者登入完成後，照這份一次做完。
-> 每個步驟都有「驗證方式」，不靠印象。
-
----
-
-## 前置狀態（已完成）
-
-```
-✅ task-5 claimed
-✅ commit 0fa5cfe（57 檔）
-✅ preflight 4/4 全綠
-✅ git clone 全新實測 PASS（最強的部署前驗證）
-✅ 工作區乾淨、部署關鍵檔案與 HEAD 零差異
-✅ vercel CLI 65.5.0 已安裝
-```
+> **狀態：✅ 部署已完成（2026-10-29）**
+> 公開網址：**https://good-words.vercel.app**
+> 外網驗收：40/40 PASS、BLOCKER 0
+>
+> 本文件保留為「日後重新部署 / 接手」的操作手冊，並記錄這次踩到的坑。
 
 ---
 
-## 步驟 0：確認使用者已完成登入
+## ★★ 先讀這段：這次部署最關鍵的四個事實
 
-需要使用者提供：
-1. **GitHub repo 網址**（例如 `https://github.com/<account>/good-words.git`）
-2. **「Vercel 登入好了」**
+若你只想記一件事，記這段。**這四點都是用實測換來的，違反任一點都會部署失敗。**
 
-**若任一未完成 → 停下來，不要嘗試代替登入。**
+### ① Vercel 認定的「專案根目錄」是 `app/`，不是 repo 根
+```
+GET /index.html              → 200
+GET /app/public/index.html   → 404   ← 若服務 repo 根，這應該 200
+GET /package.json            → 404
+GET /content/emotions.json   → 404
+GET /vercel.json             → 404
+```
+→ **repo 根的 `api/` 完全在 Vercel 專案範圍外，永遠不會被執行。**
+→ 入口必須放 `app/api/`。**這也是為什麼改 `vercel.json` 怎麼改都沒用** —— 問題不在設定。
 
-驗證登入狀態：
+### ② `content/` 不在專案範圍內 → 語料必須內嵌
+從 `app/` 內 `require('../../content/…')` **本機可行、雲端 MODULE_NOT_FOUND**。
+→ 用 `node deploy/sync-content-inline.mjs` 產生 `app/lib/content-inline.js`（要進版控）。
+→ 改完 `content/` 一定要重跑這支，否則雲端語料不會更新。
+```powershell
+node deploy\sync-content-inline.mjs --check   # 檢查是否同步
+```
+
+### ③ 判斷成功必須測 API，不能只看首頁
+首頁 200 + CSS/JS 200 **完全不代表成功** —— 我們就是這樣誤判了一輪。
+```powershell
+curl.exe -s -o NUL -w "%{http_code}" "https://good-words.vercel.app/api/health"
+# 必須 200。只看 / 是 200 不算通過。
+```
+
+### ④ 量線上資源要用 `curl`，且要 cache-bust
+- PowerShell `Invoke-WebRequest` 的 `.Content.Length` 會量到**錯誤大小**（編碼問題）→ 曾因此做出錯誤結論
+- `X-Vercel-Cache: HIT` 時可能拿到舊內容 → 加 `?cb=<timestamp>`
+```powershell
+curl.exe -s "https://good-words.vercel.app/?cb=$(Get-Date -UFormat %s)"
+```
+
+---
+
+## 部署前檢查（一鍵閘門）
 
 ```powershell
-vercel whoami          # 應顯示帳號名稱，不是 "Not logged in"
+node deploy\preflight.mjs     # 必須全綠才部署
 ```
+
+涵蓋：語料同步、路由一致性、Serverless API 契約、冷啟動模擬、repo 內容檢查。
+
+---
+
+## 步驟 0：確認登入狀態
+
+需要：
+1. **GitHub repo 網址**
+2. **Vercel 已登入**（網頁登入即可；若要用 CLI 部署才需要 `vercel login`）
+
+```powershell
+vercel whoami          # 顯示帳號名稱 = 已登入；"Logged out" = 未登入
+```
+
+> ⚠️ **網頁登入 ≠ CLI 登入**，兩者是分開的憑證。
+> 這次部署是用 **Vercel 網站的 Git 整合**完成的（不需要 CLI 登入）。
 
 ---
 
