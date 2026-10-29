@@ -1,9 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "framework": null,
-  "buildCommand": null,
-  "installCommand": "echo skip-install-no-dependencies",
   "functions": {
     "api/respond.js": { "maxDuration": 10, "memory": 512 },
     "api/share.js": { "maxDuration": 10, "memory": 256 },
