@@ -1,0 +1,12 @@
+{
+  "name": "good-words",
+  "version": "1.0.0",
+  "private": true,
+  "description": "《好好說話》— 說好話主題的 AI 陪伴網站。Vercel 專案根目錄設定（serverless functions 偵測用）。",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
