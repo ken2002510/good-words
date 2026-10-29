@@ -55,12 +55,37 @@ module.exports = (req, res) => {
     }
   }
 
-  // ── 額外的部署診斷（不影響上面的契約欄位）──
+  /**
+   * ★ 隱私：一律不輸出「絕對路徑」。
+   *
+   * 原因：/api/health 是公開端點，任何人都能打。
+   * 絕對路徑會洩漏伺服器內部結構（本機是 C:\prodcut\...，Vercel 是 /var/task/...）。
+   * 即使不是個資，也屬於不該給評審看到的內部資訊 —— 而 BRIEF §8 的匿名精神是「從嚴」。
+   *
+   * 做法：只回相對路徑（相對於專案根），拿不到相對路徑就回一個安全標記。
+   * 診斷能力不受影響：相對路徑已足夠判斷「檔案有沒有被部署到正確位置」。
+   */
+  function safeRel(p) {
+    if (!p) return null;
+    const abs = String(p);
+    const roots = [process.cwd(), '/var/task'].filter(Boolean);
+    for (const r of roots) {
+      if (abs === r) return '.';
+      if (abs.startsWith(r + '/') || abs.startsWith(r + '\\')) {
+        return abs.slice(r.length + 1).replace(/\\/g, '/');
+      }
+    }
+    // 認不出根目錄 → 只回最後一層目錄名（例如 "content"），絕不回絕對路徑
+    const parts = abs.replace(/\\/g, '/').split('/').filter(Boolean);
+    return parts.length ? `…/${parts[parts.length - 1]}` : '(unknown)';
+  }
+
+  // ── 額外的部署診斷（不影響上面的契約欄位；只回相對路徑）──
   const libDiag = {};
   for (const name of ['rules', 'safety', 'ai', 'data']) {
     libDiag[name] = safe(() => {
       const r = loadLib(name);
-      return { source: String(r.source).replace(process.cwd(), '.'), snapshot: r.snapshot, exports: Object.keys(r.mod || {}) };
+      return { source: safeRel(r.source), snapshot: r.snapshot, exports: Object.keys(r.mod || {}) };
     }, { error: '載入失敗' });
   }
 
@@ -84,7 +109,8 @@ module.exports = (req, res) => {
       rules: { enabled: true },
     },
     content: {
-      dir: (content && content.contentDir) || contentDir(),
+      // 只回相對路徑，不洩漏絕對路徑（見上方 safeRel 的說明）
+      dir: safeRel((content && content.contentDir) || contentDir()),
       source: content && content.usingFallback ? 'builtin-fallback' : 'content-dir',
       emotions: content && content.emotions ? content.emotions.length : 0,
       goodwordSets: content && content.goodwords ? Object.keys(content.goodwords).length : 0,
@@ -92,12 +118,12 @@ module.exports = (req, res) => {
     },
     recentErrors: safe(() => (loadLib('ai').mod.recentErrors || []).slice(-10), []),
 
-    // ═══ 部署診斷（附加，不影響上面的契約）═══
+    // ═══ 部署診斷（附加，不影響上面的契約；一律只回相對路徑）═══
     deploy: {
       runtime: process.version,
       elapsedMs: Date.now() - started,
-      appLibDir: appLibDir(),
-      contentDir: contentDir(),
+      appLibDir: safeRel(appLibDir()),
+      contentDir: safeRel(contentDir()),
       contentError,
       lib: libDiag,
       forcedEngine: (process.env.DEPLOY_AI_ENGINE || (process.env.DEPLOY_TRY_OLLAMA === '1' ? 'auto' : 'rules')),

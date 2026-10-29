@@ -52,6 +52,11 @@ docs/*報名*
 app/test/_diag.js
 deploy/lint_probe*.mjs
 
+# ---- Vercel function 的執行期暫存（本機模擬時產生，非原始碼）----
+#   api/_bundle.js 在本機執行時會把 content/*.json 實體化到這裡；
+#   雲端是寫到 /tmp。這裡的內容是 content/ 的複本，不該進版控（會造成兩份漂移）。
+.vercel-content/
+
 # ---- 測試截圖（~550KB，且可能含瀏覽器狀態／測試資料）----
 # 匿名性紅線：截圖可能拍到書籤列、通知、使用者名稱 → 一律不進 public repo
 app/test/screenshots/
