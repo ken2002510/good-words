@@ -3,7 +3,7 @@
   "version": 2,
   "framework": null,
   "buildCommand": null,
-  "installCommand": "echo \"no dependencies - skip install\"",
+  "installCommand": "echo skip-install-no-dependencies",
   "functions": {
     "api/respond.js": { "maxDuration": 10, "memory": 512 },
     "api/share.js": { "maxDuration": 10, "memory": 256 },
