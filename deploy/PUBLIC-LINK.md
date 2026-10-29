@@ -372,3 +372,61 @@ curl.exe -s "https://good-words.vercel.app/" -o out.html
 ---
 
 *最後更新：2026-10-29*
+
+---
+
+## 十、自動外網驗收（`node deploy/verify-public.mjs`）
+
+> 以下區塊由驗收腳本自動寫入（`--write-md`），可重跑更新。
+
+<!-- AUTO-VERIFY-START 2026-10-29T17:50:36.333Z -->
+### 自動外網驗收結果（2026-10-29T17:50:36.333Z）
+
+- 目標：`https://good-words.vercel.app`
+- 判定：**PASS**
+- 通過 40 / 40（BLOCKER 0、MAJOR 0、MINOR 0）
+
+| 群組 | 項目 | 結果 | 細節 |
+|---|---|---|---|
+| home | 首頁回 200 | ✅ | HTTP 200 |
+| home | 首頁是 HTML | ✅ | text/html; charset=utf-8 |
+| home | 首頁含作品字樣 | ✅ | 6428 bytes |
+| home | /style.css 回 200 | ✅ | HTTP 200 text/css; charset=utf-8 |
+| home | /app.js 回 200 | ✅ | HTTP 200 application/javascript; charset=utf-8 |
+| health | /api/health 回 200 | ✅ | HTTP 200 |
+| health | ok:true | ✅ |  |
+| health | 情緒類別 ≥ 10 | ✅ | 14 類 |
+| health | 好話語料庫 ≥ 10 組 | ✅ | 21 組 |
+| health | 內容來源為 content/（非內建 fallback） | ✅ | content-dir |
+| health | 所有 content JSON 合法 | ✅ | 無警告 |
+| health | lib.rules 載入自 app/lib | ✅ | snapshot=false |
+| health | lib.safety 載入自 app/lib | ✅ | snapshot=false |
+| health | lib.ai 載入自 app/lib | ✅ | snapshot=false |
+| health | 部署強制引擎為規則軌 | ✅ | rules |
+| health | 規則引擎啟用 | ✅ |  |
+| respond | 三段齊全：「我最近工作壓力好大，…」 | ✅ | HTTP 200 298ms engine=rules 情緒=工作壓力 |
+| respond |   無禁語（反毒雞湯） | ✅ | 無 |
+| respond |   回應時間 < 8s（Hobby 逾時 10s） | ✅ | 298ms |
+| respond |   情緒非兜底標籤 | ✅ | 工作壓力 |
+| respond | 三段齊全：「我覺得自己很沒用，什…」 | ✅ | HTTP 200 390ms engine=rules 情緒=自我否定 |
+| respond |   無禁語（反毒雞湯） | ✅ | 無 |
+| respond |   回應時間 < 8s（Hobby 逾時 10s） | ✅ | 390ms |
+| respond |   情緒非兜底標籤 | ✅ | 自我否定 |
+| respond | 三段齊全：「跟他分開之後，我每天…」 | ✅ | HTTP 200 308ms engine=rules 情緒=家庭衝突 |
+| respond |   無禁語（反毒雞湯） | ✅ | 無 |
+| respond |   回應時間 < 8s（Hobby 逾時 10s） | ✅ | 308ms |
+| respond |   情緒非兜底標籤 | ✅ | 家庭衝突 |
+| crisis | 「我不想活了」→ 正確轉介 | ✅ | 資源 1925/1995/1980/119 |
+| crisis |   危機回應無禁語 | ✅ | 無 |
+| crisis | 「我想死」→ 正確轉介 | ✅ | 資源 1925/1995/1980/119 |
+| crisis |   危機回應無禁語 | ✅ | 無 |
+| crisis | 「活著沒意義」→ 正確轉介 | ✅ | 資源 1925/1995/1980/119 |
+| crisis |   危機回應無禁語 | ✅ | 無 |
+| share | /api/share 回 200 | ✅ | HTTP 200 |
+| share | 產生轉送文字 | ✅ | label=給朋友 50 字 |
+| share | 有 copyText | ✅ |  |
+| edge | 空輸入 → 400 且有提示 | ✅ | HTTP 400 |
+| edge | 連續 5 次請求全部成功 | ✅ | 平均 291ms、最慢 300ms |
+| edge | 最慢 < 8s | ✅ | 300ms |
+
+<!-- AUTO-VERIFY-END -->
