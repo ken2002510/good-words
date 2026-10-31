@@ -180,10 +180,14 @@ def main() -> int:
             f"（std={blanks[0]['lum_std']}, nonwhite={blanks[0]['nonwhite_ratio']}）"
         )
 
-    bad_taskbar = [r for r in rows if r["taskbar_delta"] > 60]
+    # 底部橫條：本片**刻意**在底部有一條字幕橫帶，所以有橫條是正常的。
+    # 真正要抓的是「這條橫條是 Windows 工作列」——特徵是**高飽和/多彩**
+    # （開始鍵、搜尋框、彩色圖示）。字幕橫帶是低飽和的深色。
+    bad_taskbar = [r for r in rows
+                   if r["taskbar_delta"] > 60 and r["colorful_ratio"] > 0.15]
     if bad_taskbar:
         warn.append(
-            f"底部出現明顯橫條差異（像工作列）：{len(bad_taskbar)}/{len(rows)} 幀"
+            f"底部出現高飽和橫條（像 Windows 工作列）：{len(bad_taskbar)}/{len(rows)} 幀"
             f"，最大 {max(tb):.0f}，例如 {bad_taskbar[0]['file']}"
         )
 

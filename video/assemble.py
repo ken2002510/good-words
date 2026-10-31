@@ -121,8 +121,10 @@ def main() -> int:
 
     cmd = [
         "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
-        # 0: 背景色（整片）
-        "-f", "lavfi", "-i", f"color=c={BG}:s={W}x{H}:r={FPS}:d={total:.3f}",
+        # 0: 背景色（整片）。多給 10s 緩衝：
+        # 它是 overlay 的底，若長度剛好等於 total，片尾最後幾格會因為
+        # 上游 EOF 而變空白（先前抽幀看到 167s 之後全空）。
+        "-f", "lavfi", "-i", f"color=c={BG}:s={W}x{H}:r={FPS}:d={total + 10.0:.3f}",
         # 1: demo 錄影
         "-i", str(demo_raw),
         # 2: 旁白
@@ -137,8 +139,11 @@ def main() -> int:
             print(f"!! 缺字卡 {p} —— 請先跑 make_cards.py")
             return 3
         card_files.append(p)
+    # 字卡輸入要比總長再長一點：字卡是用 PTS 位移疊上去的，
+    # 若輸入長度剛好等於 total，最後一張（位移到 163.8s）會沒有足夠
+    # 的畫面可疊，導致片尾變成空白。多給 5s 緩衝。
     for p in card_files:
-        cmd += ["-loop", "1", "-t", f"{total:.3f}", "-i", str(p)]
+        cmd += ["-loop", "1", "-t", f"{total + 5.0:.3f}", "-i", str(p)]
 
     # ---- 字卡時間窗 ----
     def window(card: str) -> tuple[float, float]:
@@ -151,8 +156,17 @@ def main() -> int:
         if card == "threegood":
             return demo_end, min(total, demo_end + 14.0)
         if card == "tech":
-            return min(total, demo_end + 14.0), total - 7.0
-        return total - 7.0, total
+            # 留 0.35s 交錯緩衝，避免與下一張的 enable 區間在邊界重疊
+            return min(total, demo_end + 14.0), total - 8.0
+        # 收尾字卡：撐到最後一刻（不淡出，避免片尾留一段空白）
+        return total - 8.0, total + 1.0
+
+    def _windows_for_debug() -> list[tuple[str, float, float]]:
+        out = []
+        for nm in card_order:
+            x, y = window(nm)
+            out.append((nm, max(0.0, x), min(total, y)))
+        return out
 
     # ---- filter ----
     # demo 畫面：640x1138 → 放大到 1080 寬（1.6875x）→ 1138*1.6875=1920.4 → 1080x1920
@@ -176,12 +190,24 @@ def main() -> int:
         tag = f"c{i}"
         # 第一張字卡（q_self）從 0 秒就開始 → **不能淡入**，
         # 否則影片開頭 0.6s 會是純底色（抽幀會看到一張全空畫面）。
-        fade_in = "" if a <= 0.01 else f"fade=t=in:st={a:.3f}:d=0.6:alpha=1,"
+        # 淡入／淡出都必須寫在**位移之後**的時間軸上：
+        # 先把 setpts 位移好，再對位移後的串流做 fade，
+        # 否則 fade 的 st 會落在原始（未位移）的時間軸上 ——
+        # 實測：`fade=t=in:st=163.804` 放在 setpts 之前，會讓整張字卡
+        # 從 163.8s 之後完全不輸出，片尾變成一片空白。
+        # 正確順序：format → setpts(位移) → fade(用位移後的相對秒數)。
+        # 位移後串流的「相對秒數 0」＝ 絕對時間 a，
+        # 所以淡入 st 固定用 0，淡出 st 用 (b - a - 0.6)。
+        fade_in = "" if a <= 0.01 else "fade=t=in:st=0:d=0.6:alpha=1,"
+        # 最後一張字卡撐到片尾 → 不淡出，避免片尾留一段空白
+        is_last = (name == card_order[-1])
+        fade_out = "" if is_last else \
+            f"fade=t=out:st={max(0.0, (b - a) - 0.6):.3f}:d=0.6:alpha=1,"
         f.append(
             f"[{idx}:v]format=rgba,"
-            f"{fade_in}"
-            f"fade=t=out:st={max(a, b-0.6):.3f}:d=0.6:alpha=1,"
-            f"setpts=PTS-STARTPTS+{a:.3f}/TB[{tag}]"
+            f"setpts=PTS-STARTPTS+{a:.3f}/TB,"
+            f"{fade_in}{fade_out}"
+            f"null[{tag}]"
         )
         f.append(f"[{cur}][{tag}]overlay=0:0:eof_action=pass:enable='between(t,{a:.3f},{b:.3f})'[v{tag}]")
         cur = f"v{tag}"

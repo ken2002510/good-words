@@ -50,8 +50,32 @@ PAGES = RAW / "pages"
 for d in (RAW, PAGES):
     d.mkdir(parents=True, exist_ok=True)
 
-# 錄影尺寸：直式 1080x1920（網站是手機優先）
+# ---- 尺寸 ----
+# 輸出：直式 1080x1920。
 REC_W, REC_H = 1080, 1920
+
+# ★ viewport：寬度必須等於輸出寬度（否則 Playwright 會把畫面放在左側並補灰邊），
+#   但高度必須**小於**頁面高度，否則 maxScroll=0、所有捲動都是 no-op。
+#
+# 實測（送出心事後的結果頁）：
+#   viewport 1080x1920 → scrollHeight=1920  innerH=1920  maxScroll=  0  ← 捲不動
+#   viewport  540x960  → scrollHeight=1447  innerH= 960  maxScroll=487  ← 可捲，但
+#                        Playwright 只把 540px 寬的內容放在左邊，右側補灰邊
+#                        （錄出來的 1080x1920 有一半是灰的）
+#   走過四次冤枉路（全部實測）：
+#     viewport 1080x1920 → maxScroll=  0  ← 捲不動，畫面整段凍結（auditor 抓到）
+#     viewport  540x960  → maxScroll=487  ← 能捲，但錄出來右半是灰邊
+#     viewport 1080x1100 → maxScroll=191  ← 被 maxScroll 門檻擋下，且下方灰邊
+#     viewport 1080x1024 → maxScroll=267  ← 滿版但 crop 後左右文字被裁掉
+#
+#   ★ 正解：viewport 用 **9:16** 且高度小於頁高。
+#     viewport 608x1080 → scrollHeight=1419  maxScroll=339
+#     608x1080 與 1080x1920 同為 9:16 → 放大 1.777 倍即填滿，
+#     **零補邊、零裁切、零變形**，且仍有 339px 可捲動空間。
+VIEW_W, VIEW_H = 608, 1080
+
+# 捲動空間的最低要求：低於這個值就代表 viewport 設太大，直接中止
+MIN_MAX_SCROLL = 200
 
 
 def log(msg: str) -> None:
@@ -136,20 +160,31 @@ def main() -> int:
                   "--disable-notifications", "--hide-scrollbars"],
         )
         ctx_kwargs = dict(
-            viewport={"width": REC_W, "height": REC_H},
+            # viewport = 擷取尺寸，且必須等於 record_video_size
+            viewport={"width": VIEW_W, "height": VIEW_H},
             device_scale_factor=1,
             locale="zh-TW", timezone_id="Asia/Taipei", color_scheme="light",
+            # ★ 授予剪貼簿權限：headless Chromium 預設拒絕 navigator.clipboard，
+            #   導致 Demo 按「複製這句」時跳出「複製失敗，請長按選取文字」的錯誤
+            #   toast —— 錄進影片會讓評審以為功能壞掉（實際上是錄影環境限制）。
+            permissions=["clipboard-read", "clipboard-write"],
         )
         if not args.no_record:
             # ★ 關鍵：record_video_* 只錄頁面渲染表面，不錄螢幕
             ctx_kwargs["record_video_dir"] = str(PAGES)
-            ctx_kwargs["record_video_size"] = {"width": REC_W, "height": REC_H}
+            # ★ record_video_size 必須等於 viewport，否則 Playwright 會把畫面
+            #   放在左上角並在右側／下方補灰邊（已實測踩過兩次）：
+            #     viewport 540x960  + record 1080x1920 → 右半灰
+            #     viewport 1080x1100 + record 1080x1920 → 下方灰
+            #   錄成 viewport 尺寸後，再由轉檔步驟等比縮放並用網站底色補滿到
+            #   REC_W x REC_H（見下方 ffmpeg 的 scale+pad）。
+            ctx_kwargs["record_video_size"] = {"width": VIEW_W, "height": VIEW_H}
 
         browser = pw.chromium.launch(**launch_kwargs)
         ctx = browser.new_context(**ctx_kwargs)
         ctx.set_default_timeout(20000)
         page = ctx.new_page()
-        page.set_viewport_size({"width": REC_W, "height": REC_H})
+        page.set_viewport_size({"width": VIEW_W, "height": VIEW_H})
 
         # ---- 錄影前的畫面防呆 ----
         # 上次的教訓：頁面沒渲染好就開錄 → 錄到空白，事後才發現。
@@ -171,6 +206,34 @@ def main() -> int:
                 log("!! 開錄前畫面近乎全白/全空 —— 中止，不浪費一次錄影")
                 ctx.close(); browser.close()
                 return 7
+
+            # ---- ★ 可捲動性硬斷言 ----
+            # 教訓：viewport 設成 1080x1920 時，結果頁 scrollHeight==innerHeight，
+            # maxScroll=0 → 所有 window.scrollTo() 都是 no-op → 畫面整段凍結。
+            # 這裡**先送出一次心事、等結果出來**再量，因為結果頁比首頁長。
+            page.fill("#input", "今天開會我講錯話，覺得自己很沒用。")
+            page.click("#btn-submit")
+            page.wait_for_selector("#result-body", state="visible", timeout=90000)
+            page.wait_for_timeout(1200)
+            sc = page.evaluate("""() => ({
+                sh: document.documentElement.scrollHeight,
+                ih: window.innerHeight,
+            })""")
+            max_scroll = sc["sh"] - sc["ih"]
+            log(f"可捲動性檢查：scrollHeight={sc['sh']} innerHeight={sc['ih']} "
+                f"maxScroll={max_scroll}")
+            if max_scroll < MIN_MAX_SCROLL:
+                log(f"!! viewport 太大（{VIEW_W}x{VIEW_H}）：maxScroll={max_scroll} "
+                    f"< {MIN_MAX_SCROLL}，捲動會失效 → 中止錄影")
+                ctx.close(); browser.close()
+                return 8
+            log(f"   ✓ maxScroll={max_scroll} ≥ {MIN_MAX_SCROLL}，捲動有效")
+
+            # 量完之後清掉狀態，讓正式錄影從乾淨的首頁開始
+            page.evaluate("() => { try { localStorage.clear(); } catch(e){} }")
+            page.goto(url, wait_until="networkidle", timeout=30000)
+            page.wait_for_selector("#input", state="visible", timeout=20000)
+            page.wait_for_timeout(600)
         except Exception as exc:  # noqa: BLE001
             log(f"!! 開錄前檢查失敗：{exc}")
             try:
@@ -213,9 +276,18 @@ def main() -> int:
         if raw.exists():
             raw.unlink()
         log(f"Playwright 錄影：{src.name}（{src.stat().st_size/1024/1024:.1f} MB）→ 轉 mp4")
+        # ★ 轉檔：viewport 已選成與輸出**完全相同長寬比（9:16）**，
+        #   所以這裡只要單純等比例放大即可 —— 不需 pad、不需 crop、不會變形。
+        #
+        #   （先前三種寫法都失敗，記錄在此避免後人重蹈：
+        #      pad  → 留大片單色邊，像破版
+        #      crop → 左右文字被裁掉（「好好說話」變「說話」），內容不完整
+        #      兩者都是因為 viewport 長寬比 ≠ 輸出長寬比而被迫取捨。）
+        vf = f"scale={REC_W}:{REC_H}:flags=lanczos,setsar=1"
         r = subprocess.run([
             "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
             "-i", str(src),
+            "-vf", vf,
             "-r", "30", "-pix_fmt", "yuv420p",
             "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
             "-an", str(raw),
