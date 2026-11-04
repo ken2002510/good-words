@@ -124,9 +124,23 @@
         <button class="act act-primary" type="button" data-act="share">
           <span aria-hidden="true">↗</span> 轉送給別人
         </button>
-        <button class="act" type="button" data-act="publish" id="btn-publish">
-          <span aria-hidden="true">📌</span> 匿名掛上好話牆
-        </button>
+        <div class="publish-row">
+          <button class="act" type="button" data-act="publish" id="btn-publish">
+            <span aria-hidden="true">📌</span> 匿名掛上好話牆
+          </button>
+          <label class="topic-pick">主題
+            <select id="publish-topic" aria-label="貼文主題">
+              <option value="other">其他</option>
+              <option value="work">工作</option>
+              <option value="love">感情</option>
+              <option value="family">家庭</option>
+              <option value="self">自我價值</option>
+              <option value="lonely">孤單</option>
+              <option value="anger">憤怒</option>
+              <option value="anxiety">焦慮</option>
+            </select>
+          </label>
+        </div>
       </div>
 
       <p id="engine-note" class="engine-note"></p>
@@ -174,6 +188,9 @@
     </div>
     <ul id="me-history" class="fav-list me-history"></ul>
     <p id="me-empty" class="hint">還沒有紀錄。把事情匿名掛上好話牆、或鼓勵別人，就會開始累積分數。</p>
+    <h3 class="me-subtitle">我的牆上貼文 <span class="hint">（別人留給你的鼓勵）</span></h3>
+    <ul id="me-wall" class="wall-list me-wall"></ul>
+    <p id="me-wall-empty" class="hint">還沒有掛過牆。掛上去之後，別人的鼓勵會顯示在這裡。</p>
     <p class="hint">分數與紀錄只存在這個瀏覽器（localStorage），不綁帳號、不會上傳。</p>
   </section>
 
@@ -182,6 +199,7 @@
     <h2 class="fav-title">好話牆 · 匿名分享</h2>
     <p class="hint">把你遇到的事匿名掛上來：AI 會先回應一輪，然後別人可以留下一句<strong>經 AI 審核</strong>的鼓勵話。內容不含帳號與個資；有危機訊號的內容永遠不會被公開。</p>
     <p id="wall-status" class="hint"></p>
+    <div id="wall-filters" class="wall-filters" role="tablist" aria-label="依主題過濾"></div>
     <ul id="wall-list" class="wall-list"></ul>
     <p id="wall-empty" class="hint">牆上還沒有東西。在上面寫下你的事，拿到回應後按「📌 匿名掛上好話牆」。</p>
   </section>

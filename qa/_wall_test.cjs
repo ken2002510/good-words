@@ -89,12 +89,24 @@ async function waitUp(url) {
   // ── 發一篇具體貼文（應拿高分）──
   const post1 = await post(B, '/api/wall', {
     anon: 'test-anon-1234abcd',
+    topic: 'work',
     text: '昨天下午 3 點開會，主管當眾罵我「做事沒腦」，我回家一直哭，覺得自己很沒用。',
     ai: { accept: '被當眾罵一定很難受。', goodword: '罵的是那件事，不是你整個人。', smallstep: '今晚洗個熱水澡。', engine: 'rules', model: null },
   });
   ok('POST /api/wall 具體貼文 → ok 且分數高（>15）', post1.status === 200 && post1.j.ok && post1.j.points > 15, JSON.stringify({ s: post1.status, pts: post1.j.points, why: post1.j.scoreWhy }));
   ok('回傳 item 有 AI 三段', post1.j.item && post1.j.item.goodword && post1.j.item.accept && post1.j.item.smallstep);
+  ok('item 帶主題 topic=work / topicName=工作', post1.j.item && post1.j.item.topic === 'work' && post1.j.item.topicName === '工作', JSON.stringify(post1.j.item && { t: post1.j.item.topic, n: post1.j.item.topicName }));
   const itemId = post1.j.item && post1.j.item.id;
+
+  // 主題過濾 + mine 篩選
+  let wf = await get(B, '/api/wall?topic=work');
+  ok('GET /api/wall?topic=work → 1 篇', wf.j.items.length === 1);
+  wf = await get(B, '/api/wall?topic=love');
+  ok('GET /api/wall?topic=love → 0 篇', wf.j.items.length === 0);
+  let wm = await get(B, '/api/wall?mine=1&anon=test-anon-1234abcd');
+  ok('GET /api/wall?mine=1&anon=自己 → 1 篇（自己的貼文）', wm.j.items.length === 1 && wm.j.items[0].id === itemId);
+  wm = await get(B, '/api/wall?mine=1&anon=enc-anon-9999zz');
+  ok('mine=1&anon=別人 → 0 篇', wm.j.items.length === 0);
 
   // ── 牆上出現 ──
   w = await get(B, '/api/wall');
@@ -122,11 +134,15 @@ async function waitUp(url) {
 
   const encBad = await post(B, '/api/encourage', { anon: 'enc-anon-9999zz', itemId, text: '加油！你可以的！' });
   ok('禁語鼓勵 → 422 且不回傳禁語原文', encBad.status === 422 && !/加油/.test(JSON.stringify(encBad.j)), JSON.stringify(encBad.j).slice(0, 100));
+  const encVague = await post(B, '/api/encourage', { anon: 'enc-anon-9999zz', itemId, text: '你好棒耶真的好棒啊' });
+  ok('空洞好話（無回應到貼文）→ 422', encVague.status === 422, JSON.stringify(encVague.j).slice(0, 100));
+  const encShort = await post(B, '/api/encourage', { anon: 'enc-anon-9999zz', itemId, text: '謝謝你' });
+  ok('太短的鼓勵（<10字）→ 422', encShort.status === 422, JSON.stringify(encShort.j).slice(0, 100));
   const encCr = await post(B, '/api/encourage', { anon: 'enc-anon-9999zz', itemId, text: '你去死啦' });
   ok('危機鼓勵 → crisis:true 不儲存', encCr.j.crisis === true);
   w = await get(B, '/api/wall');
   ok('違規鼓勵沒進牆（仍 1 句）', w.j.items[0].encs.length === 1);
-  const enc404 = await post(B, '/api/encourage', { anon: 'enc-anon-9999zz', itemId: 'nonexistent-id-123456', text: '謝謝你' });
+  const enc404 = await post(B, '/api/encourage', { anon: 'enc-anon-9999zz', itemId: 'nonexistent-id-123456', text: '謝謝你願意把這件事說出來' });
   ok('不存在的貼文 → 404', enc404.status === 404);
 
   // ── 排行榜 ──

@@ -38,10 +38,12 @@ function deployForce() {
 
 const WALL_IDS_KEY = 'wall:ids';
 
-function publicItem(item, encs) {
+function publicItem(L, item, encs) {
   return {
     id: item.id,
     text: item.text,
+    topic: item.topic || 'other',
+    topicName: L.screen.topicName(item.topic || 'other'),
     accept: item.accept,
     goodword: item.goodword,
     smallstep: item.smallstep,
@@ -64,8 +66,11 @@ async function withBudget(promise, ms) {
 // ─────────────────────────────────────────────
 // GET /api/wall — 牆列表
 // ─────────────────────────────────────────────
-async function listWall(L) {
+async function listWall(L, query) {
   const week = L.screen.weekKey(Date.now());
+  const q = query || {};
+  const topic = q.topic && q.topic !== 'all' ? L.screen.sanitizeTopic(q.topic) : null;
+  const mineAnon = q.mine === '1' || q.mine === 'true' ? L.screen.sanitizeAnon(q.anon) : null;
   if (!L.kv.enabled()) {
     return { status: 200, body: { ok: true, wallEnabled: false, week, items: [] } };
   }
@@ -77,11 +82,13 @@ async function listWall(L) {
       let item = null;
       try { item = rawItems[i] ? JSON.parse(rawItems[i]) : null; } catch (_) { item = null; }
       if (!item || !item.id) continue;
+      if (topic && (item.topic || 'other') !== topic) continue;
+      if (mineAnon && item.anon !== mineAnon) continue;
       const encRaw = await L.kv.lrange('wall:item:' + item.id + ':encs', 0, L.screen.LIMITS.ENC_PER_ITEM - 1);
       const encs = encRaw.map((s) => { try { return JSON.parse(s); } catch (_) { return null; } }).filter(Boolean);
-      items.push(publicItem(item, encs));
+      items.push(publicItem(L, item, encs));
     }
-    return { status: 200, body: { ok: true, wallEnabled: true, week, items } };
+    return { status: 200, body: { ok: true, wallEnabled: true, week, items, topics: L.screen.TOPICS } };
   } catch (err) {
     console.error('[wall] list 失敗：', String(err && err.message));
     return { status: 200, body: { ok: true, wallEnabled: false, week, items: [], error: '牆暫時不可用' } };
@@ -106,6 +113,7 @@ async function createPost(L, payload) {
   if (!v.ok) return { status: 422, body: { ok: false, error: v.reason, week } };
 
   const text = v.text;
+  const topic = L.screen.sanitizeTopic(payload && payload.topic);
 
   // AI 回應：前端已從 /api/respond 拿到結果可直接帶上；沒帶就後端自己跑（預算內）
   let accept = '', goodword = '', smallstep = '', engine = 'rules', model = null;
@@ -151,7 +159,7 @@ async function createPost(L, payload) {
       status: 200,
       body: {
         ok: true, wallEnabled: false, localOnly: true, week,
-        item: { id: crypto.randomUUID(), text, accept, goodword, smallstep, engine, model, createdAt: Date.now(), encs: [] },
+        item: { id: crypto.randomUUID(), text, topic, accept, goodword, smallstep, engine, model, createdAt: Date.now(), encs: [] },
         points: score.total, scoreWhy: [...score.specWhy, ...(score.aiBonus ? ['AI 有接住 +' + score.aiBonus] : [])],
         base: score.base, spec: score.spec,
       },
@@ -169,7 +177,7 @@ async function createPost(L, payload) {
 
     const id = crypto.randomUUID();
     const item = {
-      id, text, accept, goodword, smallstep, engine, model,
+      id, text, topic, accept, goodword, smallstep, engine, model,
       createdAt: Date.now(), anon, // 伺服器端記錄發文者（只用於鼓勵分數回饋），對外只顯示 handle
     };
     await L.kv.set('wall:item:' + id, JSON.stringify(item));
@@ -182,7 +190,7 @@ async function createPost(L, payload) {
       status: 200,
       body: {
         ok: true, wallEnabled: true, week,
-        item: publicItem(item, []),
+        item: publicItem(L, item, []),
         points: score.total,
         scoreWhy: [...score.specWhy, ...(score.aiBonus ? ['AI 有接住 +' + score.aiBonus] : [])],
         base: score.base, spec: score.spec,
@@ -190,7 +198,7 @@ async function createPost(L, payload) {
     };
   } catch (err) {
     console.error('[wall] create 失敗：', String(err && err.message));
-    return { status: 200, body: { ok: true, wallEnabled: false, localOnly: true, week, item: { id: crypto.randomUUID(), text, accept, goodword, smallstep, engine, model, createdAt: Date.now(), encs: [] }, points: score.total, scoreWhy: score.specWhy, base: score.base, spec: score.spec } };
+    return { status: 200, body: { ok: true, wallEnabled: false, localOnly: true, week, item: { id: crypto.randomUUID(), text, topic, accept, goodword, smallstep, engine, model, createdAt: Date.now(), encs: [] }, points: score.total, scoreWhy: score.specWhy, base: score.base, spec: score.spec } };
   }
 }
 
@@ -204,23 +212,33 @@ async function addEncourage(L, payload) {
   const itemId = L.screen.sanitizeItemId(payload && payload.itemId);
   if (!anon || !itemId) return { status: 400, body: { ok: false, error: '請求格式錯誤。', week } };
 
-  const v = L.screen.validateEncourage(payload && payload.text);
+  // 有 KV 時先把貼文抓出來（確認存在 + 拿原文來審鼓勵是否真的有回應到）
+  let item = null;
+  if (L.kv.enabled()) {
+    try {
+      const raw = await L.kv.get('wall:item:' + itemId);
+      if (!raw) return { status: 404, body: { ok: false, error: '這篇貼文已經不在牆上了。', week } };
+      item = JSON.parse(raw);
+    } catch (err) {
+      console.error('[wall] encourage 取貼文失敗：', String(err && err.message));
+      return { status: 200, body: { ok: true, wallEnabled: false, localOnly: true, week } };
+    }
+  }
+
+  const v = L.screen.validateEncourage(payload && payload.text, item ? item.text : '');
   if (v.crisis) {
     const c = L.safety.crisisResponse();
     return { status: 200, body: { ok: false, crisis: true, resources: c.resources, accept: c.accept, week } };
   }
   if (!v.ok) return { status: 422, body: { ok: false, error: v.reason, week } };
 
-  if (!L.kv.enabled()) {
+  if (!L.kv.enabled() || !item) {
     // 本機牆模式：前端自己記，這裡只回分數
-    const score = L.screen.scoreEncourage(v.text, '');
+    const score = L.screen.scoreEncourage(v.text, item ? item.text : '');
     return { status: 200, body: { ok: true, wallEnabled: false, localOnly: true, week, delta: score.total, posterDelta: 0, scoreWhy: score.why, enc: { id: crypto.randomUUID(), text: v.text, handle: L.screen.anonHandle(anon), score: score.total, createdAt: Date.now() } } };
   }
 
   try {
-    const raw = await L.kv.get('wall:item:' + itemId);
-    if (!raw) return { status: 404, body: { ok: false, error: '這篇貼文已經不在牆上了。', week } };
-    const item = JSON.parse(raw);
 
     // 每日鼓勵上限
     const dayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });

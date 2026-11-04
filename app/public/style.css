@@ -480,6 +480,32 @@ textarea:focus {
 
 #btn-publish:disabled { opacity: .55; cursor: default; }
 
+.publish-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.topic-pick { font-size: 13px; color: var(--ink-faint); display: inline-flex; align-items: center; gap: 6px; }
+.topic-pick select {
+  font: inherit; font-size: 13.5px; color: var(--ink);
+  background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); padding: 7px 8px; cursor: pointer;
+}
+.topic-pick select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+.wall-filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 0; }
+.filter-chip {
+  font: inherit; font-size: 12.5px; padding: 5px 12px; min-height: 30px;
+  color: var(--ink-soft); background: var(--card);
+  border: 1px solid var(--line); border-radius: 999px; cursor: pointer;
+}
+.filter-chip:hover { border-color: var(--accent); color: var(--accent); }
+.filter-chip.is-on { color: #fff; background: var(--accent); border-color: var(--accent); }
+
+.wall-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.topic-tag {
+  font-size: 12px; color: var(--accent); background: var(--accent-soft);
+  padding: 1px 10px; border-radius: 999px; font-weight: 700;
+}
+.me-subtitle { font-size: 14.5px; margin: 18px 0 0; font-weight: 700; }
+.me-wall { max-height: 420px; overflow: auto; }
+
 /* ── 頁尾 ───────────────────────────────────────────── */
 
 .foot {

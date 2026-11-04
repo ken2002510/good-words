@@ -35,6 +35,29 @@ const ATTACK_WORDS = [
 
 const POST_MAX_LEN = 200;
 const ENC_MAX_LEN = 120;
+const ENC_MIN_LEN = 10;
+
+/** 牆的主題（抒發心情的分類） */
+const TOPICS = [
+  { id: 'work', name: '工作' },
+  { id: 'love', name: '感情' },
+  { id: 'family', name: '家庭' },
+  { id: 'self', name: '自我價值' },
+  { id: 'lonely', name: '孤單' },
+  { id: 'anger', name: '憤怒' },
+  { id: 'anxiety', name: '焦慮' },
+  { id: 'other', name: '其他' },
+];
+
+function sanitizeTopic(t) {
+  const s = String(t || '');
+  return TOPICS.some((x) => x.id === s) ? s : 'other';
+}
+
+function topicName(id) {
+  const t = TOPICS.find((x) => x.id === id);
+  return t ? t.name : '其他';
+}
 
 const LIMITS = {
   POST_PER_WEEK: 5,
@@ -124,19 +147,52 @@ function validatePost(text) {
   return { ok: true, text: t };
 }
 
+/** 空洞鼓勵（整句只有泛泛的好話） */
+const GENERIC_PRAISE = /^(好棒|你好棒|好厲害|好可憐|棒棒|乖|摸摸|抱抱|加油|你可以|厲害|好強)[！!。。.\s…]*$/i;
+
+/** 「真的有聽到對方」的詞（審核與計分共用） */
+const ACK_WORDS = [
+  '聽起來', '辛苦', '難受', '委屈', '心疼', '理解', '懂你', '陪你', '撐住',
+  '抱抱', '摸摸', '在乎', '難過', '害怕', '生氣', '累了', '無助', '孤單',
+  '沒關係', '我懂', '謝謝你說', '說出來', '好難', '好痛', '心酸', '不容易',
+];
+
+/** bigram 重疊數：鼓勵是否真的回應到貼文內容 */
+function bigramOverlap(a, b) {
+  const t = String(a || '');
+  const p = String(b || '');
+  if (!t || !p) return 0;
+  const grams = new Set();
+  for (let i = 0; i < p.length - 1; i++) grams.add(p.slice(i, i + 2));
+  let n = 0;
+  for (let i = 0; i < t.length - 1; i++) if (grams.has(t.slice(i, i + 2))) n++;
+  return n;
+}
+
 /**
- * 鼓勵話審核：危機 / 個資 /謾罵 / 反毒雞湯 lint 全過才行。
+ * 鼓勵話審核（較嚴格）：危機 / 個資 /謾罵 / 反毒雞湯 lint 全過，且
+ *   - 至少 10 字、不是純表情符號
+ *   - 不是整句空洞好話（GENERIC_PRAISE）
+ *   - 要真的回應到貼文（bigram 重疊 ≥2）或帶有「聽到感受」的詞
  * 注意：lint 失敗時只回通用訊息，不把禁語原文回給前端。
  */
-function validateEncourage(text) {
+function validateEncourage(text, postText) {
   const t = String(text || '').trim().slice(0, ENC_MAX_LEN);
-  if (t.length < 3) return { ok: false, reason: '鼓勵的話至少 3 個字。' };
+  // 危機偵測永遠第一優先（連短文也要回轉介，不會被當成普通違規）
   if (safety.detectCrisis(t).crisis) return { ok: false, crisis: true };
+  if (t.length < ENC_MIN_LEN) return { ok: false, reason: '鼓勵至少 ' + ENC_MIN_LEN + ' 個字，告訴對方你聽到了什麼。' };
+  if (!/[一-鿿A-Za-z0-9]/.test(t)) return { ok: false, reason: '寫點文字吧，單靠表情符號撐不起一句鼓勵。' };
   const pii = findPII(t);
   if (pii) return { ok: false, reason: '鼓勵裡不要留' + pii + '。' };
   if (findAttack(t)) return { ok: false, reason: '請用溫柔的話鼓勵，不要罵人。' };
   const check = rules.lint({ 承接: '', 好話: t, 小步: '' });
   if (!check.ok) return { ok: false, reason: '這句話聽起來有點空洞或刺刺的，換個說法再試試。' };
+  if (GENERIC_PRAISE.test(t)) return { ok: false, reason: '這句太空洞了 —— 試試說出你聽到的具體感受。' };
+  const overlap = bigramOverlap(t, postText || '');
+  const ack = ACK_WORDS.some((w) => t.includes(w));
+  if (overlap < 2 && !ack) {
+    return { ok: false, reason: '鼓勵要回應到對方說的事，或說出你聽到的感受，別只說空話。' };
+  }
   return { ok: true, text: t };
 }
 
@@ -178,11 +234,7 @@ function scoreEncourage(text, postText) {
   if (t.length >= 40) { pts += 4; why.push('鼓勵具體（≥40字）'); }
   else if (t.length >= 15) { pts += 2; why.push('有寫出內容（≥15字）'); }
   // bigram 重疊：鼓勵是否真的回應到貼文
-  const grams = new Set();
-  const p = String(postText || '');
-  for (let i = 0; i < p.length - 1; i++) grams.add(p.slice(i, i + 2));
-  let overlap = 0;
-  for (let i = 0; i < t.length - 1; i++) if (grams.has(t.slice(i, i + 2))) overlap++;
+  const overlap = bigramOverlap(t, postText);
   if (overlap >= 2) { pts += SCORE.ENC_ECHO; why.push('有回應到貼文內容'); }
   return { total: Math.min(SCORE.ENC_MAX, pts), why };
 }
@@ -194,6 +246,13 @@ module.exports = {
   SCORE,
   POST_MAX_LEN,
   ENC_MAX_LEN,
+  ENC_MIN_LEN,
+  TOPICS,
+  sanitizeTopic,
+  topicName,
+  GENERIC_PRAISE,
+  ACK_WORDS,
+  bigramOverlap,
   sanitizeAnon,
   sanitizeItemId,
   anonHandle,

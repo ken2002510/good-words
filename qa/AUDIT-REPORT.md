@@ -320,7 +320,16 @@ Demo 段內最長完全靜止：12.5s —— 為「送出後等待 AI 推論 + �
 回歸：`run-tests.js --no-ollama` 仍 **76/76**（前端新增區塊不影響匿名性/無 CDN/375px 檢查）。
 說明書新增「（七）好話牆與每週稱號」後 verify **ALL PASS**（正文 4983/5000 字、PDF 10 頁）。
 
+## 2026-11-05 第二輪加強（回應使用者回饋）
+
+1. **主題分類**：牆上貼文帶主題（工作/感情/家庭/自我價值/孤單/憤怒/焦慮/其他），發文時依偵測到的情緒自動預選、可手動改；牆上可依主題過濾（`GET /api/wall?topic=work`）
+2. **看別人的鼓勵**：個人面板新增「我的牆上貼文」（`GET /api/wall?mine=1&anon=…`），每篇列出收到的鼓勵與得分
+3. **鼓勵審核加嚴**（回饋：空話也過+分）：至少 10 字、非純表情、非整句空洞好話（如「你好棒»）、且須 bigram 回應到貼文內容 ≥2 或含「聽到感受」詞；危機偵測永遠第一優先（短危機文也回轉介）
+4. 測試更新：`_wall_test.cjs` **33/33**（新增主題過濾、mine 篩選、空洞/太短鼓勵 422、危機鼓勵順序）；回歸 76/76 + 8/8
+
 ## 部署待辦
 
-Vercel 後台 → Storage → Create Database（KV）→ 連結到本專案（自動注入 `KV_REST_API_URL`/`KV_REST_API_TOKEN`）→ Redeploy。
+Vercel 後台 → **Storage → Marketplace → Upstash → Create Database（Redis）→ Connect 連到本專案**（自動注入 `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`，程式也相容 `KV_REST_API_*` 舊命名）→ Redeploy。
+注意：不要選「Redis — Official Redis for Vercel」（給的是原生 `redis://` URL，本專案零依賴 REST client 讀不到）。
 之後 `/api/health` 的 `engines.wall.enabled` 會變 true，`/api/wall` 開始跨裝置共享。
+**未連 KV 前別人看不到牆上內容是預期行為**（降級本機牆），不是 bug。

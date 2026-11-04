@@ -47,8 +47,12 @@
     meHistory: $('me-history'),
     meEmpty: $('me-empty'),
     wallStatus: $('wall-status'),
+    wallFilters: $('wall-filters'),
     wallList: $('wall-list'),
     wallEmpty: $('wall-empty'),
+    publishTopic: $('publish-topic'),
+    meWall: $('me-wall'),
+    meWallEmpty: $('me-wall-empty'),
     boardWeek: $('board-week'),
     boardList: $('board-list'),
     boardEmpty: $('board-empty'),
@@ -344,6 +348,7 @@
     published = false;
     var pb = $('btn-publish');
     if (pb) pb.disabled = false;
+    if (el.publishTopic) el.publishTopic.value = topicOfEmotion(current && current.emotion);
 
     refreshFavButton();
     setTab('friend');
@@ -730,12 +735,31 @@
 
   function esc(s) { var d = document.createElement('div'); d.textContent = String(s == null ? '' : s); return d.innerHTML; }
 
+  function topicOfEmotion(em) {
+    var n = (em && em.name) || '';
+    if (/工作|職場|主管|老闆|同事|加班/.test(n)) return 'work';
+    if (/感情|分手|男友|女友|曖昧|戀愛/.test(n)) return 'love';
+    if (/家庭|父母|爸|媽|家人/.test(n)) return 'family';
+    if (/自我|價值|沒用|否定|自責/.test(n)) return 'self';
+    if (/孤單|孤獨|沒人/.test(n)) return 'lonely';
+    if (/憤怒|生氣|火大/.test(n)) return 'anger';
+    if (/焦慮|緊張|害怕|恐懼/.test(n)) return 'anxiety';
+    return 'other';
+  }
+
   function wallItemHtml(item) {
     var encs = (item.encs || []).map(function (e) {
       return '<li class="enc-item"><span class="enc-handle">' + esc(e.handle) + '</span>：' + esc(e.text) +
         ' <span class="hint">+' + esc(e.score) + '分</span></li>';
     }).join('');
+    var tag = item.topicName
+      ? '<span class="topic-tag">' + esc(item.topicName) + '</span>'
+      : '';
+    var encCount = (item.encs || []).length
+      ? '<span class="hint">' + (item.encs || []).length + ' 句鼓勵</span>'
+      : '';
     return '' +
+      '<div class="wall-meta">' + tag + encCount + '</div>' +
       '<p class="wall-text">' + esc(item.text) + '</p>' +
       '<div class="wall-ai">' +
         '<p><strong>承接：</strong>' + esc(item.accept) + '</p>' +
@@ -750,7 +774,36 @@
       '</div>';
   }
 
+  var wallTopic = 'all';
+  var lastWallData = null;
+
+  function renderFilters(topics) {
+    var list = [{ id: 'all', name: '全部' }].concat(topics || [
+      { id: 'work', name: '工作' }, { id: 'love', name: '感情' }, { id: 'family', name: '家庭' },
+      { id: 'self', name: '自我價值' }, { id: 'lonely', name: '孤單' }, { id: 'anger', name: '憤怒' },
+      { id: 'anxiety', name: '焦慮' }, { id: 'other', name: '其他' },
+    ]);
+    el.wallFilters.innerHTML = '';
+    list.forEach(function (t) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'filter-chip' + (wallTopic === t.id ? ' is-on' : '');
+      b.textContent = t.name;
+      b.setAttribute('data-topic', t.id);
+      el.wallFilters.appendChild(b);
+    });
+  }
+
+  el.wallFilters.addEventListener('click', function (ev) {
+    var b = ev.target.closest ? ev.target.closest('.filter-chip') : null;
+    if (!b) return;
+    wallTopic = b.getAttribute('data-topic') || 'all';
+    renderFilters(lastWallData && lastWallData.topics);
+    renderWall(lastWallData);
+  });
+
   function renderWall(data) {
+    lastWallData = data;
     var items = (data && data.items) || [];
     if (data && data.wallEnabled === false) {
       // 降級：只顯示本機牆
@@ -760,9 +813,13 @@
     } else {
       el.wallStatus.textContent = '牆上共 ' + items.length + ' 篇（最新在前，保留最近 60 篇）。';
     }
+    if (!data || data.wallEnabled !== false) renderFilters(data && data.topics);
+    var shown = wallTopic === 'all' ? items : items.filter(function (it) { return (it.topic || 'other') === wallTopic; });
     el.wallList.innerHTML = '';
-    el.wallEmpty.hidden = items.length > 0;
-    items.forEach(function (item) {
+    el.wallEmpty.hidden = shown.length > 0;
+    if (!shown.length && items.length) el.wallEmpty.textContent = '這個主題還沒有人分享。';
+    else el.wallEmpty.textContent = '牆上還沒有東西。在上面寫下你的事，拿到回應後按「📌 匿名掛上好話牆」。';
+    shown.forEach(function (item) {
       var li = document.createElement('li');
       li.className = 'wall-item';
       li.innerHTML = wallItemHtml(item);
@@ -773,6 +830,40 @@
   function loadWall() {
     fetch('/api/wall').then(function (r) { return r.json(); }).then(renderWall).catch(function () {
       renderWall({ wallEnabled: false, items: loadWallMine() });
+    });
+  }
+
+  // 我的牆上貼文（含別人留的鼓勵）—— 有 KV 走 server 篩選，沒有就看本機鏡
+  function loadMeWall() {
+    fetch('/api/wall?mine=1&anon=' + encodeURIComponent(getAnon()))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var items = (data && data.items) || [];
+        if (!data || data.wallEnabled === false) items = loadWallMine();
+        renderMeWall(items);
+      })
+      .catch(function () { renderMeWall(loadWallMine()); });
+  }
+
+  function renderMeWall(items) {
+    el.meWall.innerHTML = '';
+    el.meWallEmpty.hidden = items.length > 0;
+    items.slice(0, 10).forEach(function (item) {
+      var li = document.createElement('li');
+      li.className = 'wall-item';
+      var encs = (item.encs || []);
+      var encHtml = encs.length
+        ? '<ul class="enc-list">' + encs.map(function (e) {
+            return '<li class="enc-item"><span class="enc-handle">' + esc(e.handle) + '</span>：' + esc(e.text) + ' <span class="hint">+' + esc(e.score) + '分</span></li>';
+          }).join('') + '</ul>'
+        : '<p class="hint">還沒有人鼓勵這篇 —— 把它分享給朋友，或等牆上有緣人看到。</p>';
+      li.innerHTML = '<div class="wall-meta">' +
+        (item.topicName ? '<span class="topic-tag">' + esc(item.topicName) + '</span>' : '') +
+        '<span class="hint">' + fmtTime(item.createdAt) + '</span></div>' +
+        '<p class="wall-text">' + esc(item.text) + '</p>' +
+        '<div class="wall-ai"><p class="quote"><strong>AI 的好話：</strong>' + esc(item.goodword) + '</p></div>' +
+        encHtml;
+      el.meWall.appendChild(li);
     });
   }
 
@@ -821,6 +912,7 @@
       body: JSON.stringify({
         anon: getAnon(),
         text: lastText,
+        topic: el.publishTopic ? el.publishTopic.value : 'other',
         ai: {
           accept: current.accept, goodword: current.goodword, smallstep: current.smallstep,
           engine: current.meta && current.meta.engine, model: current.meta && current.meta.model,
@@ -842,6 +934,7 @@
         toast('已匿名掛上好話牆 +' + (j.points || 0) + ' 分' + (j.scoreWhy && j.scoreWhy.length ? '（' + j.scoreWhy.join('、') + '）' : ''));
         loadWall();
         loadBoard();
+        loadMeWall();
       })
       .catch(function () { toast('連線出了點問題，牆沒掛上'); if (btn) btn.disabled = false; });
   }
@@ -867,6 +960,7 @@
         toast('鼓勵已掛上 +' + (j.delta || 0) + ' 分' + (j.posterDelta ? '，對方也獲得 +' + j.posterDelta + ' 分' : ''));
         loadWall();
         loadBoard();
+        loadMeWall();
       })
       .catch(function () { btnEl.disabled = false; toast('連線出了點問題'); });
   }
@@ -897,6 +991,7 @@
   renderMe();
   loadWall();
   loadBoard();
+  loadMeWall();
 
   // 顯示引擎狀態（讓評審看到 AI 真的在跑；不揭露任何個資）
   fetch('/api/health').then(function (r) { return r.json(); }).then(function (h) {

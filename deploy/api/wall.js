@@ -16,7 +16,12 @@ module.exports = async (req, res) => {
 
   try {
     if (req.method === 'GET') {
-      const out = await core.listWall(core.libs());
+      const u = new URL(req.url, 'http://x');
+      const out = await core.listWall(core.libs(), {
+        topic: u.searchParams.get('topic') || undefined,
+        mine: u.searchParams.get('mine') || undefined,
+        anon: u.searchParams.get('anon') || undefined,
+      });
       return res.status(out.status).json(out.body);
     }
     // POST
