@@ -1,0 +1,345 @@
+{
+  "version": 1,
+  "theme": "dark",
+  "style": "glass",
+  "segs": [
+    {
+      "id": "seg-1",
+      "title": "最不會說好話的對象",
+      "tag": "PROBLEM",
+      "color": "accent",
+      "start": 1200,
+      "end": 16766,
+      "dimAt": 0.4
+    },
+    {
+      "id": "seg-2",
+      "title": "《好好說話》是什麼",
+      "tag": "INTRO",
+      "color": "support",
+      "start": 17116,
+      "end": 44000,
+      "dimAt": 0.4
+    },
+    {
+      "id": "seg-3",
+      "title": "真實操作一次",
+      "tag": "LIVE DEMO",
+      "color": "data",
+      "start": 44350,
+      "end": 110750,
+      "dimAt": 0.12
+    },
+    {
+      "id": "seg-4",
+      "title": "護欄與底線",
+      "tag": "SAFETY",
+      "color": "special",
+      "start": 111100,
+      "end": 142328,
+      "dimAt": 0.12
+    },
+    {
+      "id": "seg-5",
+      "title": "好話牆怎麼玩",
+      "tag": "WALL",
+      "color": "accent",
+      "start": 142678,
+      "end": 164854,
+      "dimAt": 0.4
+    },
+    {
+      "id": "seg-6",
+      "title": "先對自己說一句",
+      "tag": "END",
+      "color": "special",
+      "start": 165204,
+      "end": 172836,
+      "dimAt": 0.4
+    }
+  ],
+  "cards": [
+    {
+      "id": "c1-1",
+      "effect": "big-statement",
+      "start": 1350,
+      "end": 8850,
+      "side": "left",
+      "params": {
+        "text": "搞砸了，第一個念頭是\n「我怎麼這麼沒用」",
+        "fontSize": 64,
+        "color": "accent"
+      }
+    },
+    {
+      "id": "c1-2",
+      "effect": "quote-reveal",
+      "start": 9500,
+      "end": 16616,
+      "side": "right",
+      "params": {
+        "lines": "換成別人對你說\n你早就生氣了\n對自己說，卻覺得理所當然",
+        "highlight": "生氣",
+        "fontSize": 38,
+        "color": "special"
+      }
+    },
+    {
+      "id": "c3-1",
+      "effect": "timeline-milestones",
+      "start": 17266,
+      "end": 28390,
+      "side": "left",
+      "params": {
+        "items": "打進心事\n接住情緒\n給你一句好話",
+        "color": "support",
+        "spreadMs": 1400
+      }
+    },
+    {
+      "id": "c3-2",
+      "effect": "stat-board",
+      "start": 29040,
+      "end": 37836,
+      "side": "right",
+      "params": {
+        "title": "先辨識，再給話",
+        "stats": "情緒:工作壓力\n強度:4/5\n處境:工作\n順序:最後才給話",
+        "color": "data"
+      }
+    },
+    {
+      "id": "c5",
+      "effect": "compare-bars",
+      "start": 38486,
+      "end": 43850,
+      "side": "left",
+      "params": {
+        "title": "它不說…",
+        "leftLabel": "「加油」",
+        "leftValue": 6,
+        "leftColor": "support",
+        "rightLabel": "具體的好話",
+        "rightValue": 94,
+        "rightColor": "accent",
+        "footnote": "也不假裝你的困難不存在"
+      }
+    },
+    {
+      "id": "c6-1",
+      "effect": "big-statement",
+      "start": 44500,
+      "end": 50224,
+      "side": "right",
+      "params": {
+        "text": "這是真實的網站畫面\n不是簡報",
+        "fontSize": 46,
+        "color": "support"
+      },
+      "offsetY": -560
+    },
+    {
+      "id": "c6-2",
+      "effect": "progress-ring",
+      "start": 50874,
+      "end": 53430,
+      "side": "left",
+      "params": {
+        "title": "心事已送出",
+        "percent": 100,
+        "durMs": 900,
+        "label": "不用修飾",
+        "sublabel": "直接打出來",
+        "color": "data"
+      },
+      "offsetY": -560
+    },
+    {
+      "id": "c6-3",
+      "effect": "stat-board",
+      "start": 54080,
+      "end": 61772,
+      "side": "right",
+      "params": {
+        "title": "AI 情緒辨識",
+        "stats": "聽到的:工作壓力\n強度:4/5\n訊號:自我價值\n回應:先承接",
+        "color": "data"
+      },
+      "offsetY": -560
+    },
+    {
+      "id": "c6-4",
+      "effect": "step-checklist",
+      "start": 62422,
+      "end": 69442,
+      "side": "left",
+      "params": {
+        "items": "① 承接\n用它的話，把處境說一次",
+        "doneColor": "special"
+      },
+      "offsetY": -560
+    },
+    {
+      "id": "c6-5",
+      "effect": "quote-reveal",
+      "start": 70092,
+      "end": 79272,
+      "side": "right",
+      "params": {
+        "lines": "② 好話\n「我聽見你為自己講話的\n每一秒都認真」",
+        "highlight": "認真",
+        "fontSize": 34,
+        "color": "accent"
+      },
+      "offsetY": -560
+    },
+    {
+      "id": "c6-6",
+      "effect": "step-checklist",
+      "start": 79922,
+      "end": 87230,
+      "side": "left",
+      "params": {
+        "items": "③ 小步\n今晚就能做的一件小事",
+        "doneColor": "data"
+      },
+      "offsetY": -560
+    },
+    {
+      "id": "c6-7",
+      "effect": "keyword-matrix",
+      "start": 87880,
+      "end": 96892,
+      "side": "right",
+      "params": {
+        "words": "複製\n收藏\n轉送\n朋友\n家人\n同事",
+        "hotIndex": 2,
+        "color": "support",
+        "tagline": "換對象，生成不同的說法"
+      },
+      "offsetY": -560
+    },
+    {
+      "id": "c6-8",
+      "effect": "compare-bars",
+      "start": 97542,
+      "end": 105042,
+      "side": "left",
+      "params": {
+        "title": "換一個對象",
+        "leftLabel": "對自己說",
+        "leftValue": 28,
+        "leftColor": "support",
+        "rightLabel": "送給別人",
+        "rightValue": 86,
+        "rightColor": "accent",
+        "footnote": "就變成可以送出去的善意"
+      },
+      "offsetY": -560
+    },
+    {
+      "id": "c6-9",
+      "effect": "stat-board",
+      "start": 105692,
+      "end": 110600,
+      "side": "right",
+      "params": {
+        "title": "收藏清單",
+        "stats": "存在:你的瀏覽器\n登入:不用\n上傳:不會\n帳號:不綁",
+        "color": "data"
+      },
+      "offsetY": -560
+    },
+    {
+      "id": "c6-10",
+      "effect": "big-statement",
+      "start": 111250,
+      "end": 120454,
+      "side": "left",
+      "params": {
+        "text": "危機訊號\n立刻給求助資源",
+        "fontSize": 50,
+        "color": "special"
+      },
+      "offsetY": -560
+    },
+    {
+      "id": "c6-11",
+      "effect": "stat-board",
+      "start": 121104,
+      "end": 129276,
+      "side": "right",
+      "params": {
+        "title": "求助資源",
+        "stats": "1925:安心專線\n1995:生命線\n1980:張老師\n底線:AI 不當諮商師",
+        "color": "special"
+      },
+      "offsetY": -560
+    },
+    {
+      "id": "c17",
+      "effect": "timeline-milestones",
+      "start": 129926,
+      "end": 142178,
+      "side": "left",
+      "params": {
+        "items": "說好話・核心\n做好事・轉送\n存好心・不評價\n信心・歡喜・希望・方便",
+        "color": "data",
+        "spreadMs": 1600
+      },
+      "offsetY": -560
+    },
+    {
+      "id": "c18-1",
+      "effect": "stat-board",
+      "start": 142828,
+      "end": 149920,
+      "side": "left",
+      "params": {
+        "title": "好話牆運作",
+        "stats": "匿名掛牆:是\nAI 先回應:一輪\n鼓勵經 AI 審核:才顯示\n雙方得分:是",
+        "color": "data"
+      }
+    },
+    {
+      "id": "c18-2",
+      "effect": "number-roll",
+      "start": 150220,
+      "end": 157312,
+      "side": "right",
+      "params": {
+        "title": "排行榜",
+        "value": 10,
+        "suffix": " 名",
+        "caption": "前十名有稱號",
+        "durMs": 1400,
+        "color": "special"
+      }
+    },
+    {
+      "id": "c18-3",
+      "effect": "segment-board",
+      "start": 157612,
+      "end": 164704,
+      "side": "left",
+      "params": {
+        "title": "每週一重算",
+        "items": "重算|每週一重算排行榜\n公開|排行榜公開透明\n稱號|前十名有稱號\n隱私|分數只存在你的瀏覽器",
+        "color": "support"
+      }
+    },
+    {
+      "id": "c19",
+      "effect": "quote-reveal",
+      "start": 165354,
+      "end": 172686,
+      "side": "right",
+      "params": {
+        "lines": "好好說話\n先對自己說一句\n再把它送給別人",
+        "highlight": "好好說話",
+        "fontSize": 42,
+        "color": "accent"
+      }
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+/* ============ 設計令牌（移植版） ============
+ * 語意色**寫死 SKILL.md / registry 版**（tokens.css 原值與文件互換，不用它）：
+ *   accent #e88ab8 · data #5ec9a0 · support #7aa7e8 · special #f5c86b
+ */
+
+:root {
+  /* ---- Studio UI（工作台外殼，不進導出畫面） ---- */
+  --ui-bg: #0b0c10;
+  --ui-panel: #13151b;
+  --ui-panel2: #1a1d24;
+  --ui-border: #262a33;
+  --ui-text: #e9eaee;
+  --ui-muted: #8b8f9a;
+  --ui-accent: #6a9bff;
+
+  --font-display: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC",
+    system-ui, -apple-system, sans-serif;
+
+  /* ---- 語意色（卡片唯一可引用的色板，鐵律 3）—— SKILL.md 版寫死 ---- */
+  --c-accent: #e88ab8;   /* 主色 · 粉 */
+  --c-data: #5ec9a0;     /* 數據 · 青綠 */
+  --c-support: #7aa7e8;  /* 輔助 · 藍 */
+  --c-special: #f5c86b;  /* 點睛 · 黃 */
+  --ac: var(--c-accent); /* SKILL.md .fx-title 用的別名 */
+
+  --c-text: var(--stage-text);
+  --c-muted: var(--stage-muted);
+  --c-line: var(--stage-line);
+}
+
+/* ---- 暗底主題（預設） ---- */
+[data-theme="dark"] {
+  --stage-bg: #101216;
+  --stage-text: #f2f3f5;
+  --stage-muted: #aab0bd;
+  --stage-line: rgba(255, 255, 255, 0.14);
+
+  /* glass 卡（SKILL.md 版）：rgba(13,16,23,.74)+blur(16px)+border rgba(255,255,255,.14)+radius 20px */
+  --card-fill: rgba(13, 16, 23, 0.74);
+  --card-line: rgba(255, 255, 255, 0.14);
+  --card-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  --card-blur: 16px;
+}
+
+/* ---- 亮底主題 ---- */
+[data-theme="light"] {
+  --stage-bg: #f4f4f2;
+  --stage-text: #1c1e24;
+  --stage-muted: #5a6070;
+  --stage-line: rgba(0, 0, 0, 0.12);
+
+  --card-fill: rgba(255, 255, 255, 0.46);
+  --card-line: rgba(0, 0, 0, 0.14);
+  --card-shadow: 0 18px 50px rgba(30, 40, 70, 0.18);
+  --card-blur: 16px;
+}

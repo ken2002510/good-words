@@ -1,231 +1,183 @@
-# T3 影片品質報告 —《好好說話》作品介紹影片
+# T3 影片品質報告 —《好好說話》作品介紹影片（v2 重組版，2026-11-05）
 
 **產出**：`C:\prodcut\video\out\好好說話_作品介紹影片.mp4`
-**verdict：PASS**（所有關卡通過，含變化率量測與人工目視）
+**舊版備份**：`out\backup_v1.mp4`（175.867s / 24.6 MB，task-1~4 前的版本）
+**verdict：PASS（自動關卡全過）＋ 人工抽幀零個資終審：待 Lead 終審**
 
-> ⚠️ **本報告曾於 2026-10-31 大幅修訂。** 初版 verdict 為 PASS，但後來被獨立審查
-> （auditor）以**變化率量測**推翻：Demo 段有 97.4% 的時間「字幕以外區域完全不動」，
-> 違反競賽「應呈現實際操作畫面（Demo）」之規定。根因與修法見 §6。
+v2 重點：卡窗改由 `timeline.json` 推導、seg5 疊入真實 UI 截圖、
+疊上動態疊卡 `assets/overlay/overlay.mp4`（ProRes 4444 alpha）、
+tech 字卡文案改為「好話牆」、end 字卡加上網址。
 
 ---
 
-## 1. 規格（ffprobe 實際輸出）
+## 1. 最終規格（ffprobe 實測）
 
 ```
-2026-11-04 重組版（僅重錄第 18 段旁白 + tech 字卡，demo 錄影未動，重新全關卡驗證）：
-duration = 175.900s   (<= 180s 硬上限：PASS，餘 4.1s)
-size     = 24.60 MB
-video    = h264  1080x1920  30/1  yuv420p
-audio    = aac   44100Hz    2ch
+duration = 176.000s   (<= 180s 硬上限：PASS，餘 4.0s；≤179.5s 熔斷未觸發)
+size     = 37,490,554 bytes = 35.75 MB
+video    = h264 High profile, level 4.1, 1080x1920, 30/1 fps, yuv420p, 5280 frames
+audio    = aac LC, 44100 Hz, stereo, 172.836s（= 旁白 171.636 + head_pad 1.2）
+container= mp4 (isom), +faststart
+overlay  = assets/overlay/overlay.mp4: prores 4444, yuva444p12le, 1080x1920@30, 5276 幀 = 175.867s
+           合成時以 trim+tpad(clone) 對齊到 total=176s
 ```
 
 解碼檢查：`ffmpeg -v error -i out.mp4 -f null -` → **無任何錯誤輸出**
 
-音訊：mean -22.6 dB / max -6.1 dB；
-靜音偵測（>2s、-35dB）→ **0 段**，全片無異常空白。
+### 疊圖層順序（由下到上）
+底色 → demo 錄影（demo 視窗內）→ 6 張 PNG 字卡（卡窗由 timeline 推導）→
+seg5 三張截圖（S4/S7/S8）→ **overlay.mp4 動態疊卡（alpha 疊加）** →
+底部 190px 字幕橫帶 + 燒錄字幕（永遠最後）。
+
+### alpha 疊加驗證（實測）
+- overlay.mp4 本身：t=145s 抽幀 alpha>0 覆蓋率 100%（seg dim 0.4 全螢幕半透明），
+  t=1.0s（首卡前）alpha>0 = 0% → alpha 通道確實存在且正確。
+- 成片 t=145s 與「proper alpha blend 模型（shot*(1-a)+ovl_rgb*a）」誤差 **8.09**；
+  與「當不透明疊加」誤差 **68.37** → 確認 ffmpeg overlay filter 有吃 alpha，
+  疊卡正確半透明疊在截圖之上，輸出仍為 yuv420p h264。
 
 ---
 
-## 1b. ★ 畫面變化率（最關鍵的驗收項）
+## 2. qa_check.py 四關（全部 PASS）
 
-用 **caption-free band** 方法：裁掉底部字幕帶（字幕固定佔底部 ~17%），
-只比較網站區域在時間軸上的變化。**這一步不可省略** —— 字幕一直在換行，
-會讓「全片看起來很會動」，把畫面凍結的事實蓋掉（初版就是被這個騙過）。
+| 關卡 | 結果 |
+|---|---|
+| 1_spec | PASS — 176.0s ≤ 180s（餘 4.0s）；1080x1920 直式；音訊 aac 44100Hz |
+| 2_decode | PASS — `ffmpeg -v error -f null -` 無錯誤 |
+| 3_frames | PASS — 抽出 12 幀到 `frames/f01..f12`（覆蓋舊檔），供人工零個資終審 |
+| 4_motion | PASS — 185 對相鄰幀平均差異 **15.40**，近乎靜止比例 **1%**（門檻 <35% 且 mean>0.5）|
+
+詳細見 `video/report.json` / `video/REPORT.md`（qa_check.py 自動產生）。
+
+## 3. verify_motion.py（demo 視窗 43.35–130.426s）— PASS
 
 ```
-方法：ffmpeg -vf "crop=iw:ih*0.78:0:0,fps=2,scale=54:96" -pix_fmt gray -f rawvideo
-      再對相鄰幀算 np.abs(np.diff(frames,axis=0)).mean(axis=(1,2))
-
-全片（344 幀 / 172s）：
-  steps >2.0 : 25.7%     ← 門檻 >=15%  → PASS
-  steps >0.5 : 30.6%
-
-Demo 段（43.4–143.3s，真實操作最密集處；2026-11-04 重組版重驗）：
-  每 10s 視窗 mean 差異 1.0–11.4（max達 199.6），無一窗凍結；
-  qa_check.py 4_motion：183 對相鄰幀平均差異 10.06，近乎靜止比例 0% → PASS
+python verify_motion.py out/好好說話_作品介紹影片.mp4 --demo-start 43.35 --demo-end 130.426
+全片          n=351  mean=6.910  變化步數 48.4%  ✓ (需 ≥15%)
+Demo 43-130s  n=174  mean=10.220 max=123.57  變化步數 73.0%  ✓ (需 ≥15%)
+最長連續凍結：8.0s（29.0s → 37.0s）——落在 title/rules 字卡靜態區，屬設計如此
+判定：PASS
 ```
 
-**已知殘留靜止段（不構成缺陷）**
-- Demo 段內最長完全靜止：**12.5s**（為送出後等待 AI 推論 + 打字前停頓，屬自然節奏）
-- 片頭 0–19s、片尾 141–163s：靜態字卡，非操作段（設計如此）
+每 10 秒視窗 mean diff：demo 段（40–130s）介於 4.7–21.3，無一窗凍結；
+140–170s（seg5 截圖 + 動態疊卡動畫）mean 5.7–10.6，疊卡動畫有在動。
 
 ---
 
-## 2. 影片結構與旁白對齊
+## 4. 19 段新結構（timeline.json → 成片座標 = timeline + head_pad 1.2s）
 
-| 時間 | 段落 | 畫面 |
+| idx | seg | timeline 起訖(s) | 成片起訖(s) | card | 內容摘要 |
+|---|---|---|---|---|---|
+| 1 | 1 | 0.000–7.800 | 1.200–9.000 | q_self | 最不會說好話的對象是自己 |
+| 2 | 1 | 8.150–15.566 | 9.350–16.766 | q_self | 換成別人你早就生氣了 |
+| 3 | 2 | 15.916–27.340 | 17.116–28.540 | title | 《好好說話》是什麼 |
+| 4 | 2 | 27.690–36.786 | 28.890–37.986 | title | 先辨識情緒與處境，最後才給話 |
+| 5 | 2 | 37.136–42.800 | 38.336–44.000 | rules | 不說「加油」、不說「別想太多」 |
+| 6 | 3 | 43.150–49.174 | 44.350–50.374 | demo | 現在實際操作一次（真實畫面） |
+| 7 | 3 | 49.524–52.380 | 50.724–53.580 | demo | 把心事寫下來 |
+| 8 | 3 | 52.730–60.722 | 53.930–61.922 | demo | AI 情緒辨識：工作壓力 4/5 |
+| 9 | 3 | 61.072–68.392 | 62.272–69.592 | demo | ① 承接 |
+| 10 | 3 | 68.742–78.222 | 69.942–79.422 | demo | ② 好話 |
+| 11 | 3 | 78.572–86.180 | 79.772–87.380 | demo | ③ 小步 |
+| 12 | 3 | 86.530–95.842 | 87.730–97.042 | demo | 複製・收藏・轉送 |
+| 13 | 3 | 96.192–103.992 | 97.392–105.192 | demo | 換對象 = 送出去的善意 |
+| 14 | 3 | 104.342–109.550 | 105.542–110.750 | demo | 收藏只存在你的瀏覽器 |
+| 15 | 4 | 109.900–119.404 | 111.100–120.604 | demo | 危機訊號 → 立刻給求助資源 |
+| 16 | 4 | 119.754–128.226 | 120.954–129.426 | demo | 1925/1995/1980，AI 不當諮商師 |
+| 17 | 4 | 128.576–141.128 | 129.776–142.328 | threegood | 三好四給落地 |
+| 18 | 5 | 141.478–163.654 | 142.678–164.854 | tech | **好話牆**：匿名掛牆/AI 先回應、鼓勵經 AI 審核、越具體分越高雙方得分、每週一重算排行榜前十稱號、紀錄只存在瀏覽器 |
+| 19 | 6 | 164.004–171.636 | 165.204–172.836 | end | 好好說話，先對自己說一句（good-words.vercel.app） |
+
+旁白音軌總長 171.636s；成片 total = 171.636 + 1.2 (head_pad) + 3.164 (tail_pad) = **176.000s**。
+
+## 5. 卡窗推導（assemble.py 由 timeline 聚合，不再硬編碼）
+
+同 card 連續 run 聚合成 [首段 start, 尾段 end]；非 demo 內縮 150ms；全部 + head_pad 1.2s。
+demo 例外照舊：起點 −1s、結束 +1s。
+
+| card run | timeline 起訖 | 成片卡窗（內縮後） |
 |---|---|---|
-| 00:00–00:20 | 問題：最不會說好話的對象是自己 | 字卡 q_self |
-| 00:20–00:36 | 作品登場 + 反毒雞湯 | 字卡 title |
-| 00:36–00:43 | 「不說加油、不說別想太多」 | 字卡 rules |
-| **00:43–02:22** | **真實 Demo 操作** | **網站實錄（無遮擋）** |
-| 02:22–02:36 | 三好四給落地 | 字卡 threegood |
-| 02:36–02:44 | 技術：本機 AI / 線上規則引擎 | 字卡 tech |
-| 02:44–02:52 | 收尾 | 字卡 end |
+| q_self | 0.000–15.566 | **1.350–16.616** |
+| title | 15.916–36.786 | **17.266–37.836** |
+| rules | 37.136–42.800 | **38.486–43.850** |
+| demo | 43.150–128.226 | **43.350–130.426**（±1s 例外） |
+| threegood | 128.576–141.128 | **129.926–142.178** |
+| tech | 141.478–163.654 | **142.828–164.704** |
+| end | 164.004–171.636 | **165.354–172.686**（尾卡 enable 撐到 total=176，不淡出） |
 
-旁白 19 段、TTS `zh-TW-HsiaoChenNeural` **rate +18%**（任務建議 +6%，
-但 +6% 總長 178.9s 會突破 180s，經 Lead 核准改 +18% → 164.6s）。
-字幕由 `subtitles.srt` 燒錄，時間軸以 **ffprobe 實測音檔長度**計算，非字數估算。
+**demo 視窗 = [43.350, 130.426]**，與 `raw/demo_timing.json` 的 `demo_window_video` 完全一致 ✓
 
----
+### seg5 截圖視窗（tech run 成片時間三等分）
+| 截圖 | 成片視窗 |
+|---|---|
+| S4_wall_after_publish | 142.678–150.070 |
+| S7_me_panel | 150.070–157.462 |
+| S8_leaderboard_top10 | 157.462–164.854 |
 
-## 3. 零個資驗證（BRIEF §8）★失格紅線
-
-### 錄影方式（物理性保證）
-改用 **Playwright 原生錄影**（`record_video_dir` / `record_video_size=1080x1920`）。
-原生錄影只抓**頁面自己的渲染表面**，不是螢幕截圖 ——
-桌面、桌布、其他視窗、Windows 工作列、瀏覽器網址列／分頁列／書籤列／通知
-**在物理上不可能入鏡**（不是「避開」，是「不存在」）。
-
-> ⚠️ 第一版用 `ffmpeg gdigrab -offset_x/-offset_y -i desktop` 擷取桌面區域，
-> 結果錄到整個桌面（含「2026 三好AI創新應用競賽」分頁標題、DeepSeek HARNESS 視窗、
-> Windows 工作列、其他專案名稱）→ 由 Lead 抽幀發現並擋下。已整段重做。
-
-### 自動掃描（全片，每 3 秒取樣，共 58 幀）
-```
-最大彩色像素比例 = 0.026  @ 111.0s   （桌面門檻 0.25）→ 無桌面特徵
-最小亮度標準差   = 11.38  @ 162.0s   （空白門檻 2.0） → 無空白幀
-```
-
-### 人工逐幀目視（33 幀，每 5 秒一張 → `qa/contact.png`）
-每一幀都確認過，畫面**只有網站本身或本作品字卡**，內容描述：
-
-| 幀 | 時間 | 看到什麼 |
-|---|---|---|
-| 001–004 | 0–16s | 字卡「我們最不會說好話的對象是自己」+ 三句自我攻擊對話框 |
-| 005–006 | 21–26s | 字卡《好好說話》標題 + 三段結構（承接／好話／小步） |
-| 007–009 | 31–42s | 字卡「不是心靈雞湯」，加油／別想太多等禁用語被劃掉 |
-| 010 | 47s | 網站首頁：輸入框已填入心事、四個處境 chips、送出鈕 |
-| 011–015 | 52–73s | 送出 → 情緒辨識「自我否定 ●●●○○」+ 三段卡片完整呈現 |
-| 016–018 | 78–89s | 複製／收藏鈕、「已收藏」狀態、轉送面板（給朋友／家人／同事） |
-| 019–021 | 94–104s | 轉送對象切換、收藏清單（自我否定 + 好話 + 小步） |
-| 022–025 | 109–125s | 危機護欄：1925／1995／1980／119 完整顯示 + 收藏清單 |
-| 026–028 | 130–141s | 危機說明文字、回到輸入區 |
-| 029–032 | 146–161s | 字卡「三好·四給」與「技術與隱私：本機/線上兩條路」 |
-| 033 | 166.6s | 字卡「好好說話／先對自己說一句，再送給別人」 |
-
-**未出現任何**：姓名、暱稱、學校／單位名稱、Logo、指導教師、人像、
-桌面、檔案總管、書籤列、通知、使用者名稱、帳號、Email。
-
-> 註：「1980 **張老師**」是**真實熱線名稱**（張老師基金會），非人名或頭銜，不構成個資。
+各張以 `scale=contain` 到 1080x1920、底色（0x1A1512）pad。demo 視窗內不疊全螢幕圖（避免蓋操作畫面），
+其餘截圖（S1/S2/S3/S5/S6/S9/S10）未入片。
 
 ---
 
-## 4. 真實操作畫面驗證（非靜態輪播）
+## 6. 疊卡清單（overlay.mp4 動態疊卡，共 21 卡，時間為成片秒數）
 
-- **畫面變異分析**：取樣 172 對相鄰幀，平均差異 **8.23**，**近乎靜止比例 0%**
-  → 全片持續變化，非靜態截圖輪播。
-- Demo 段落為**單一連續錄影**（131.2s 原始錄影 → 取 98.9s 區段），
-  由 Playwright 實際操作產生：真實打字、真實送出、真實 AI 推論等待。
-- 畫面底部的 engine note 實測顯示
-  **「這句由『本機 AI 模型 (qwen3:4b-instruct)』產生，用了 X 秒」**
-  —— 錄影當下 engine = **ollama**，有真實推論延遲入鏡。
+| 卡 id | 效果 | 成片視窗(s) | 側 |
+|---|---|---|---|
+| c1-1 | big-statement | 1.350–8.850 | left |
+| c1-2 | quote-reveal | 9.500–16.616 | right |
+| c3-1 | timeline-milestones | 17.266–28.390 | left |
+| c3-2 | stat-board | 29.040–37.836 | right |
+| c5 | compare-bars | 38.486–43.850 | left |
+| c6-1..c6-11 | various (demo 段, dim 0.12, offsetY −560) | 44.500–129.276 | 左右交替 |
+| c17 | timeline-milestones | 129.926–142.178 | left |
+| c18-1 | stat-board 好話牆運作 | 142.828–149.920 | left |
+| c18-2 | number-roll 排行榜前十 | 150.220–157.312 | right |
+| c18-3 | segment-board 每週一重算 | 157.612–164.704 | left |
+| c19 | quote-reveal 收尾 | 165.354–172.686 | right |
 
----
+（21 卡 = 2+2+1+11+1+3+1；來源 `overlay/overlay.json`。）
 
-## 5. 已知缺陷（誠實揭露）
+## 7. 截圖清單（assets/shots，共 11 張，全部 page.route 虛構資料）
 
-1. **Demo 畫面為 1080x1920 全幅**，網站是手機優先設計，因此在 1080 寬下
-   內容置中、左右留白較多。已用字幕橫帶填補底部，視覺上可接受。
-2. **語速 +18%** 而非任務建議的 +6%（原因與核准見上）。
-3. **本機版與線上版 AI 引擎不同**：影片第 18 段已明確分開敘述
-   （本機版 Ollama／線上版規則引擎），不誇大、不混淆。
-   此為事實查證後改寫（查 `deploy/api/respond.js:41` 確認部署預設為 `rules`）。
-4. **字卡淡入淡出**：修正過一個 ffmpeg 陷阱 ——
-   `fade` 的 `st` 必須在 `setpts` 位移**之後**的時間軸上，
-   否則 `fade=t=in:st=163.804` 會讓整張字卡不輸出、片尾變空白。
-5. 片頭第一張字卡與片尾最後一張字卡**刻意不淡入／不淡出**，
-   避免開頭與結尾出現空白畫面。
+S1_home_clean, S2_rewrite_result, S3_response_3part, S4_wall_after_publish,
+S5_wall_filter, S6_encourage_flow, S7_me_panel, S8_leaderboard_top10,
+S9_crisis_panel, S10_mobile_375_home, S10_mobile_375_result。
+入片者：S4 / S7 / S8（見 §5）。
 
----
+## 8. 零個資驗證（BRIEF §8）★失格紅線
 
-## 5b. ★ 兩個曾被擋下的重大缺陷（含根因與修法）
-
-本影片被退過兩次，兩次都是**失格等級**。記錄於此，避免後人重蹈。
-
-### 缺陷 A：整支影片錄到「桌面」而非網站
-**症狀**：畫面是 Windows 桌面 —— 含瀏覽器分頁標題、DeepSeek HARNESS 視窗、
-Windows 工作列、其他專案名稱。**違反「不得出現學校/單位/可辨識資訊」，直接失格。**
-**根因**：用 `ffmpeg -f gdigrab -offset_x/-offset_y -i desktop` 擷取視窗區域，
-但 offset/尺寸未如預期套用；且**只驗證了檔案大小 > 0，沒驗畫面內容**。
-**修法**：改用 **Playwright 原生錄影**（`record_video_dir`）——
-它錄的是「頁面自己的渲染表面」，桌面/工作列/瀏覽器 UI **在物理上不可能入鏡**。
-
-### 缺陷 B：Demo 段 97.4% 時間「完全不動」
-**症狀**：auditor 量到全片 171.8s 中，**167.2s（97.4%）** 字幕以外區域完全靜止；
-74–130s 平均像素差僅 **0.053**（同一張點陣圖連續 56.5 秒）。
-看起來像「靜態截圖 + 換字幕」，正是競賽明文禁止的「以簡報取代作品展示」。
-**根因（實測）**：
-```
-record_demo.py 的 viewport 設為 1080x1920 = 頁面完整高度
-→ document.documentElement.scrollHeight - window.innerHeight = 0
-→ maxScroll = 0
-→ demo_steps.py 裡每一次 window.scrollTo() 都是 no-op
-→ click/fill 雖然真的執行了，但捲動完全無效，畫面幾乎全程凍結
-```
-**修法（四處）**：
-1. viewport 改 **608×1080**（與輸出 1080×1920 同為 9:16，放大 1.777 倍即填滿，
-   **零補邊、零裁切、零變形**，且仍有 `maxScroll=339` 可捲動）
-2. **新增錄影前硬斷言**：`maxScroll < 200` → 直接中止錄影（實測已擋下一次）
-3. `record_video_size` 改為**等於 viewport**（否則 Playwright 會補灰邊）
-4. `demo_steps.py`：修正 `scroll_to(extra_pause=)` → `duration=`（7 處，原本會 TypeError）；
-   捲動動畫拉長至 1.3–1.6s；`hold()` 期間加入 ±3px 極緩慢「呼吸捲動」消除長時間靜止
-
-**修法過程中另外踩到的坑（一併記錄）**：
-- `pad` 補滿 → 留大片單色邊，像破版
-- `crop` 填滿 → 左右文字被裁掉（「好好說話」變「說話」），內容不完整
-- headless Chromium 預設拒絕 `navigator.clipboard` → 按「複製」跳失敗 toast
-  → 需 `permissions=["clipboard-read","clipboard-write"]`
-
-**第三次教訓（驗收方法論）**：
-| 教訓 | 錯誤的驗法 | 正確的驗法 |
-|---|---|---|
-| 1 | 只看檔案大小 > 0 | 抽幀**看畫面內容** |
-| 2 | 只看單幀內容對不對 | 量**時間軸上的變化** |
-| 3 | 用全片算變化率 | **排除字幕帶**再算（字幕會蓋掉凍結的事實） |
+- **錄影與截圖來源**：全部經 Playwright，`page.route` 攔截 /api/respond、/api/wall、
+  /api/leaderboard 回傳**虛構資料**（牆友#AF3B 等假名、假分數）；錄影為 Playwright
+  原生頁面錄影（`record_video_dir`），桌面/工作列/瀏覽器 UI 在物理上不可能入鏡。
+- **PIL 防呆**：每張截圖檢查尺寸 + stddev≥3；錄影前 preflight 空白防呆。
+- **自動抽幀**：qa_check.py 抽 12 幀到 `frames/`（f01–f12，覆蓋舊檔）。
+- **人工抽幀終審**：**待 Lead 終審** —— 請 Lead 逐幀檢視 `video/frames/f01_0013.54s.png` …
+  `f12_0162.46s.png`，確認無姓名/暱稱/學校單位/Logo/人像/帳號/Email。
+  （「1980 張老師」為真實熱線名稱，非個資。）
 
 ---
 
-## 6. 重現指令
+## 9. v2 合成踩過的坑（記錄，避免後人踩）
+
+1. **fade 的 st 必須是 setpts 位移「之後」的絕對秒數**：
+   `setpts=PTS-STARTPTS+a/TB` 後串流 pts = a+k/25（絕對時間），
+   所以正確寫法是 `fade=t=in:st=a`、`fade=t=out:st=b-0.6`。
+   若用相對 st=(b-a)-0.6，所有幀 pts 都 > st+d，fade out 會把整張卡 alpha 降成 0，
+   實測整段字卡/截圖完全不輸出（v2 第一次合成因此所有卡與截圖都消失，已修復重跑）。
+2. **overlay.mp4 的 alpha 疊加確認**：prores 4444 (yuva444p12le) 直接當 overlay 第二輸入，
+   ffmpeg overlay filter 自動吃 alpha；長度用 `trim=0:total+2` + `tpad=stop_mode=clone:stop_duration=2`
+   對齊（overlay 175.867s < total 176s），輸出維持 yuv420p。
+3. EOF 緩衝保留：底色 +10s、字卡/截圖迴圈輸入 +5s，避免片尾空白幀。
+
+## 10. 重現指令
 
 ```powershell
-$py = "C:\Users\User\AppData\Local\hermes\hermes-agent\venv\Scripts\python.exe"
+$py = "C:\Users\User\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\python.exe"
 cd C:\prodcut\video
-
-# 1. 起 server（務必用全新行程，舊行程會誤導）
-Get-Process node -EA SilentlyContinue | Stop-Process -Force
-$env:PORT='3210'; node C:\prodcut\app\server.js   # 另開視窗
-
-# 2. 旁白（+18%）
-& $py narration.py --clean --gap 0.25
-
-# 3. 字卡
-& $py make_cards.py
-
-# 4. 錄影（Playwright 原生錄影 + 開錄前空白防呆）
-uv run --offline --with playwright --with pillow python record_demo.py --port 3210
-
-# 5. 錄影後畫面內容驗證（必須 PASS 才往下）
-& $py verify_frames.py raw\demo_raw.mp4
-
-# 6. 組裝
-& $py assemble.py
-
-# 7. 成品驗收
-& $py qa_check.py
-& $py verify_frames.py "out\好好說話_作品介紹影片.mp4"
+& $py make_cards.py        # 6 張字卡（tech=好話牆, end=含網址）
+& $py assemble.py          # 卡窗由 timeline 推導 + seg5 截圖 + overlay alpha 疊加
+& $py qa_check.py          # 4 關 + 抽 12 幀 -> report.json / REPORT.md / frames/
+& $py verify_motion.py "out\好好說話_作品介紹影片.mp4" --demo-start 43.35 --demo-end 130.426
 ```
 
-## 7. 檔案清單
-
-| 檔案 | 用途 |
-|---|---|
-| `record_demo.py` | Playwright 原生錄影（含開錄前空白防呆） |
-| `demo_steps.py` | A→H 真實操作腳本（依旁白長度配速） |
-| `narration.py` | edge-tts 旁白 + SRT 字幕 |
-| `make_cards.py` | 6 張 1080x1920 字卡 |
-| `assemble.py` | ffmpeg 合成（字卡／字幕／旁白） |
-| `qa_check.py` | 規格／解碼／抽幀／動態 4 關卡 |
-| `verify_frames.py` | **畫面內容驗證**（空白／桌面／工作列偵測） |
-| `qa/contact.png` | 33 幀對照表（人工目視用） |
-| `qa/mobile375.png` | 375px 手機版檢查截圖 |
+（task-1~4 的旁白/截圖/demo錄影/overlay 渲染見各自 task；本報告只覆蓋 task-5 合成 + QA。）

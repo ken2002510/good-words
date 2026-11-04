@@ -191,26 +191,28 @@ def card_threegood() -> Image.Image:
 
 
 def card_tech() -> Image.Image:
+    """tech 字卡 = seg5 旁白對應的「好話牆」功能卡（card id 保持 tech，勿改）。"""
     img, d = base_card()
-    d.text((100, 300), "技術與隱私", font=font(80, bold=True), fill=CREAM)
+    d.text((100, 250), "好話牆", font=font(96, bold=True), fill=CREAM)
+    d.text((100, 385), "把心事匿名掛上牆，讓善意流動", font=font(40), fill=MUTED)
 
     items = [
-        ("本機 AI 推論", "Ollama 在你的電腦上跑，心事不上傳"),
-        ("線上雲端 AI", "雲端模型即時生成回應"),
-        ("自動降級", "雲端不可用時改規則引擎，永遠有回應"),
-        ("免登入 · 免安裝", "開網頁就能用，手機優先"),
+        ("匿名掛牆 · AI 先回應", "心事掛上好話牆，AI 先回一輪好話"),
+        ("鼓勵經 AI 審核才顯示", "牆上每一句鼓勵都先過 AI 審核"),
+        ("越具體分越高", "時間、細節、當下的感受——雙方都得分"),
+        ("每週一重算排行榜", "排行榜公開透明，前十名有專屬稱號"),
     ]
-    y = 540
+    y = 510
     for k, v in items:
         d.ellipse([100, y + 12, 136, y + 48], fill=GOLD)
-        d.text((180, y), k, font=font(52, bold=True), fill=CREAM)
-        d.text((180, y + 78), v, font=font(36), fill=MUTED)
-        y += 210
+        d.text((180, y), k, font=font(50, bold=True), fill=CREAM)
+        d.text((180, y + 74), v, font=font(34), fill=MUTED)
+        y += 195
 
-    d.rounded_rectangle([90, y + 20, W - 90, y + 200], radius=28,
+    d.rounded_rectangle([90, y + 30, W - 90, y + 210], radius=28,
                         fill=(38, 31, 27), outline=(120, 100, 88), width=2)
-    d.text((130, y + 60), "本機版：心事不離開你的裝置", font=font(40), fill=MUTED)
-    d.text((130, y + 122), "線上版：僅用於這次回應，不保存", font=font(44, bold=True), fill=GOLD)
+    d.text((130, y + 68), "分數與紀錄只存在你的瀏覽器", font=font(40), fill=MUTED)
+    d.text((130, y + 130), "不綁帳號 · 不上傳 · 免登入", font=font(44, bold=True), fill=GOLD)
     return img
 
 
@@ -221,7 +223,8 @@ def card_end() -> Image.Image:
     d.text((104, 930), "再把這句話送給別人。", font=font(56), fill=GOLD)
 
     d.line([(104, 1100), (104 + 300, 1100)], fill=GOLD, width=5)
-    d.text((104, 1180), "免登入 · 不上傳 · 手機優先", font=font(38), fill=MUTED)
+    d.text((104, 1180), "good-words.vercel.app", font=font(52, bold=True), fill=GOLD)
+    d.text((104, 1270), "免登入 · 不上傳 · 手機優先", font=font(38), fill=MUTED)
     return img
 
 

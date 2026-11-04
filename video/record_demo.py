@@ -26,12 +26,20 @@ Playwright 的原生錄影（`record_video_dir`）錄的是**頁面自己的渲�
 
 用法：
     uv run --offline --with playwright --with pillow python record_demo.py [--port 3210]
+    uv run --offline --with playwright --with pillow python record_demo.py --port 3210 --with-wall
+
+`--with-wall` 會在本機自行拉起「好話牆雲端模式」所需的兩個行程：
+    1. node video/mock_kv.cjs          → mock Vercel KV REST（127.0.0.1:59997，內建 seed 虛構牆資料）
+    2. node C:\prodcut\app\server.js   → 本機網站，env 設 KV_REST_API_URL 指向 mock KV、
+                                          OLLAMA_URL 指到死港（走 rules 引擎）
+    等 /api/health 回報 engines.wall.enabled === true 後才開錄。
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -49,6 +57,16 @@ RAW = HERE / "raw"
 PAGES = RAW / "pages"
 for d in (RAW, PAGES):
     d.mkdir(parents=True, exist_ok=True)
+
+# ---- --with-wall 用的行程路徑 ----
+NODE_EXE = os.environ.get("DSH_NODE") or (
+    r"C:\Users\User\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node\bin\node.exe"
+)
+if not Path(NODE_EXE).exists():
+    NODE_EXE = "node"  # 退回 PATH
+APP_SERVER = r"C:\prodcut\app\server.js"
+MOCK_KV = HERE / "mock_kv.cjs"
+MOCK_KV_PORT = int(os.environ.get("MOCK_KV_PORT", "59997"))
 
 # ---- 尺寸 ----
 # 輸出：直式 1080x1920。
@@ -95,6 +113,92 @@ def wait_port(port: int, timeout: float = 40.0) -> bool:
     return False
 
 
+def wait_health_wall(port: int, timeout: float = 40.0) -> dict:
+    """等 /api/health 回來且 engines.wall.enabled === true，回傳 health JSON。"""
+    deadline = time.time() + timeout
+    last = None
+    while time.time() < deadline:
+        try:
+            with urllib.request.urlopen(
+                f"http://127.0.0.1:{port}/api/health", timeout=2.0
+            ) as r:
+                h = json.loads(r.read().decode("utf-8"))
+                last = h
+                if (h.get("engines") or {}).get("wall", {}).get("enabled") is True:
+                    return h
+        except Exception as exc:  # noqa: BLE001
+            last = exc
+        time.sleep(0.4)
+    raise RuntimeError(f"health 未達 wall.enabled=true：{last}")
+
+
+def start_wall_stack(port: int, log) -> list[subprocess.Popen]:
+    """--with-wall：spawn mock_kv.cjs + app/server.js（雲端牆模式），回傳行程清單。"""
+    procs: list[subprocess.Popen] = []
+    kv_log = (RAW / "mockkv.out.log").open("wb")
+    kv_err = (RAW / "mockkv.err.log").open("wb")
+    kv = subprocess.Popen([NODE_EXE, str(MOCK_KV)], stdout=kv_log, stderr=kv_err)
+    procs.append(kv)
+    if not wait_port(MOCK_KV_PORT, timeout=15.0):
+        raise RuntimeError(f"mock KV ({MOCK_KV_PORT}) 沒有回應")
+    log(f"mock KV 已啟動：127.0.0.1:{MOCK_KV_PORT}（seed 虛構牆資料）")
+
+    env = dict(os.environ)
+    env["PORT"] = str(port)
+    env["KV_REST_API_URL"] = f"http://127.0.0.1:{MOCK_KV_PORT}"
+    env["KV_REST_API_TOKEN"] = "test-token"
+    env["OLLAMA_URL"] = "http://127.0.0.1:59999"      # 死港 → 走 rules 引擎
+    env["OLLAMA_TIMEOUT_MS"] = "3000"                    # 死港會立刻 ECONNREFUSED，這只是保險
+    env.pop("NVIDIA_API_KEY", None)                      # 不走雲端，避免真的打出去
+    env.pop("NVKEY", None)
+    srv_log = (RAW / "server.out.log").open("wb")
+    srv_err = (RAW / "server.err.log").open("wb")
+    srv = subprocess.Popen([NODE_EXE, APP_SERVER], env=env, stdout=srv_log, stderr=srv_err)
+    procs.append(srv)
+
+    h = wait_health_wall(port)
+    log(f"app server 已啟動：127.0.0.1:{port}，wall.enabled="
+        f"{h['engines']['wall']['enabled']}，ollama.alive={h['engines']['ollama']['alive']}")
+    return procs
+
+
+def stop_procs(procs: list[subprocess.Popen], log) -> None:
+    for p in procs:
+        try:
+            p.terminate()
+            p.wait(timeout=5)
+        except Exception:  # noqa: BLE001
+            try:
+                p.kill()
+            except Exception:  # noqa: BLE001
+                pass
+    if procs:
+        log("已關閉 --with-wall 暫起的行程（mock_kv + app server）")
+
+
+def demo_window_from_timeline() -> dict:
+    """依 assemble.py 的公式從 timeline.json 推導 demo 視窗。
+
+    含 card=="demo" 的段：起點 -1s 到結束 +1s（timeline 座標）；
+    成片座標 = timeline + head_pad(1.2s)。
+    """
+    tl_path = HERE / "assets" / "audio" / "timeline.json"
+    head_pad = 1.2
+    try:
+        tl = json.loads(tl_path.read_text(encoding="utf-8"))
+        demo_segs = [t for t in tl if t.get("card") == "demo"]
+        w0 = min(t["start"] for t in demo_segs) - 1.0
+        w1 = max(t["end"] for t in demo_segs) + 1.0
+    except Exception:  # noqa: BLE001
+        w0, w1 = 42.15, 129.226
+    return {
+        "head_pad": head_pad,
+        "demo_window_timeline": [round(w0, 3), round(w1, 3)],
+        "demo_window_video": [round(w0 + head_pad, 3), round(w1 + head_pad, 3)],
+        "demo_window_len": round(w1 - w0, 3),
+    }
+
+
 # 前端選擇器（實際選擇器以 index.html 為準，已核對）
 DEFAULT_UI = {
     "input": ["#input", "textarea"],
@@ -129,13 +233,32 @@ def main() -> int:
     ap.add_argument("--url", default=None)
     ap.add_argument("--no-record", action="store_true", help="不錄影，只驗證流程")
     ap.add_argument("--headed", action="store_true")
+    ap.add_argument("--with-wall", action="store_true",
+                    help="自行 spawn mock_kv.cjs + app/server.js（雲端牆模式，seed 虛構資料），錄完自動關閉")
     args = ap.parse_args()
 
     url = args.url or f"http://127.0.0.1:{args.port}/"
-    if not wait_port(args.port):
-        log(f"!! 127.0.0.1:{args.port} 沒有回應 —— 網站尚未可跑")
+
+    # ---- --with-wall：先把 mock KV + app server 拉起來 ----
+    wall_procs: list[subprocess.Popen] = []
+    if args.with_wall:
+        try:
+            wall_procs = start_wall_stack(args.port, log)
+        except Exception as exc:  # noqa: BLE001
+            log(f"!! --with-wall 行程啟動失敗：{exc}")
+            stop_procs(wall_procs, log)
+            return 3
+    elif not wait_port(args.port):
+        log(f"!! 127.0.0.1:{args.port} 沒有回應 —— 網站尚未可跑（--with-wall 可自行拉起）")
         return 2
 
+    try:
+        return _run(args, url)
+    finally:
+        stop_procs(wall_procs, log)
+
+
+def _run(args, url: str) -> int:
     from playwright.sync_api import sync_playwright  # noqa: PLC0415
 
     ui = load_ui()
@@ -143,6 +266,7 @@ def main() -> int:
     import demo_steps  # noqa: PLC0415
 
     demo_steps.ENTRY_URL["url"] = url
+    demo_steps.WITH_WALL = bool(args.with_wall)
 
     if PAGES.exists():
         for f in PAGES.glob("*.webm"):
@@ -181,14 +305,18 @@ def main() -> int:
             ctx_kwargs["record_video_size"] = {"width": VIEW_W, "height": VIEW_H}
 
         browser = pw.chromium.launch(**launch_kwargs)
-        ctx = browser.new_context(**ctx_kwargs)
-        ctx.set_default_timeout(20000)
-        page = ctx.new_page()
-        page.set_viewport_size({"width": VIEW_W, "height": VIEW_H})
 
-        # ---- 錄影前的畫面防呆 ----
-        # 上次的教訓：頁面沒渲染好就開錄 → 錄到空白，事後才發現。
-        # 這裡在開錄前先確認「頁面真的畫出網站內容」，否則直接中止。
+        # ---- 錄影前的防呆檢查 —— 在「不錄影」的暫用 context 上跑 ----
+        # ★ 重要：preflight 會真的送出一次心事再量 maxScroll，這些動作
+        #   **不可以進錄影**（會浪費 demo 視窗的秒數、且狀態不乾淨）。
+        #   所以 preflight 用另一個沒有 record_video_dir 的 context，結束後關掉；
+        #   正式錄影的 context 是全新的 → demo_raw.mp4 的 t=0 就是 demo 步驟起點，
+        #   assemble.py 的 demo 視窗（raw[0:demo_len]）對到的正是 demo 步驟本身。
+        pctx = browser.new_context(**{k: v for k, v in ctx_kwargs.items()
+                                       if k not in ("record_video_dir", "record_video_size")})
+        pctx.set_default_timeout(20000)
+        page = pctx.new_page()
+        page.set_viewport_size({"width": VIEW_W, "height": VIEW_H})
         try:
             page.goto(url, wait_until="networkidle", timeout=30000)
             page.wait_for_selector("#input", state="visible", timeout=20000)
@@ -204,7 +332,7 @@ def main() -> int:
             log(f"開錄前畫面檢查：亮度標準差 {std:.1f}，平均 {mean:.1f} → raw/preflight.png")
             if std < 3.0:
                 log("!! 開錄前畫面近乎全白/全空 —— 中止，不浪費一次錄影")
-                ctx.close(); browser.close()
+                pctx.close(); browser.close()
                 return 7
 
             # ---- ★ 可捲動性硬斷言 ----
@@ -225,31 +353,56 @@ def main() -> int:
             if max_scroll < MIN_MAX_SCROLL:
                 log(f"!! viewport 太大（{VIEW_W}x{VIEW_H}）：maxScroll={max_scroll} "
                     f"< {MIN_MAX_SCROLL}，捲動會失效 → 中止錄影")
-                ctx.close(); browser.close()
+                pctx.close(); browser.close()
                 return 8
             log(f"   ✓ maxScroll={max_scroll} ≥ {MIN_MAX_SCROLL}，捲動有效")
-
-            # 量完之後清掉狀態，讓正式錄影從乾淨的首頁開始
-            page.evaluate("() => { try { localStorage.clear(); } catch(e){} }")
-            page.goto(url, wait_until="networkidle", timeout=30000)
-            page.wait_for_selector("#input", state="visible", timeout=20000)
-            page.wait_for_timeout(600)
         except Exception as exc:  # noqa: BLE001
             log(f"!! 開錄前檢查失敗：{exc}")
             try:
-                ctx.close(); browser.close()
+                pctx.close(); browser.close()
             except Exception:  # noqa: BLE001
                 pass
             return 7
+        finally:
+            # preflight context 用完即丟（它有送出過測試心事，localStorage 也髒了）
+            try:
+                pctx.close()
+            except Exception:  # noqa: BLE001
+                pass
+
+        # ---- 正式錄影 context：全新、乾淨、從 t=0 開始錄 demo ----
+        ctx = browser.new_context(**ctx_kwargs)
+        ctx.set_default_timeout(20000)
+        page = ctx.new_page()
+        page.set_viewport_size({"width": VIEW_W, "height": VIEW_H})
 
         try:
             log("執行 demo 步驟…")
             t0 = time.time()
             demo_steps.run(page, ui, log)
             took = time.time() - t0
-            log(f"demo 步驟實測 {took:.1f}s")
+            win = demo_window_from_timeline()
+            state = demo_steps.get_state()
+            log(f"demo 步驟實測 {took:.1f}s（demo 視窗 {win['demo_window_len']:.3f}s，"
+                f"成片座標 {win['demo_window_video'][0]:.2f}-{win['demo_window_video'][1]:.2f}s）")
+            fit = took <= win["demo_window_len"] + 0.5
+            if not fit:
+                log(f"!! 實測 {took:.1f}s 超出 demo 視窗 {win['demo_window_len']:.3f}s —— "
+                    f"成片尾端會被 trim 切掉，請刪減 demo_steps 步驟")
+            timing = {
+                "with_wall": bool(args.with_wall),
+                "seconds": round(took, 2),                 # demo 步驟實際秒數（= raw 起訖）
+                "demo_start_raw": 0.0,                      # preflight 不錄影，raw t=0 即 demo 起點
+                "demo_end_raw": round(took, 2),
+                "fit_window": fit,
+                "marks": state.get("marks", {}),
+                "evidence": state.get("evidence", {}),
+                **win,                                      # head_pad / demo_window_* / demo_window_len
+                "note": "demo_raw.mp4 的 [0, demo_window_len) 被 assemble 疊進成片；"
+                        "成片座標 = timeline 座標 + head_pad(1.2s)",
+            }
             (RAW / "demo_timing.json").write_text(
-                json.dumps({"seconds": round(took, 2)}, ensure_ascii=False),
+                json.dumps(timing, ensure_ascii=False, indent=2),
                 encoding="utf-8")
         except Exception as exc:  # noqa: BLE001
             run_error = exc

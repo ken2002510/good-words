@@ -38,9 +38,37 @@ FPS = 30
 BG = "0x1A1512"          # 溫暖深底
 BG2 = "0x2A211C"
 
-# 時間軸（秒）—— 與 narration.py 的 timeline.json 對齊後會覆寫
-DEMO_START = 46.0
-DEMO_END = 125.0
+# 卡窗完全由 assets/audio/timeline.json 推導（OVERLAY-ORCHESTRATION-REPORT §缺口 1），不寫死
+HEAD_PAD = 1.2         # 旁白整體平移（成片座標 = timeline 座標 + head_pad）
+CARD_INSET = 0.15      # 非 demo 卡窗內縮 150ms
+DEMO_PAD = 1.0         # demo 例外：含 card=="demo" 的 run，起點 -1s、結束 +1s
+
+
+def aggregate_runs(tl: list[dict]) -> list[list]:
+    """同 card 的連續 run 聚合成 [card, 首段start, 尾段end]（timeline 座標）。"""
+    runs: list[list] = []
+    for it in tl:
+        c = it.get("card", "")
+        if runs and runs[-1][0] == c:
+            runs[-1][2] = it["end"]
+        else:
+            runs.append([c, it["start"], it["end"]])
+    return runs
+
+
+def card_windows(runs: list[list], head_pad: float) -> dict[str, tuple[float, float]]:
+    """run → 成片座標卡窗。
+
+    demo 例外照舊：起點 -1s、結束 +1s；其餘卡窗內縮 150ms；全部再加 head_pad。
+    （demo 視窗應等於 raw/demo_timing.json 的 demo_window_video。）
+    """
+    wins: dict[str, tuple[float, float]] = {}
+    for c, s, e in runs:
+        if c == "demo":
+            wins[c] = (s - DEMO_PAD + head_pad, e + DEMO_PAD + head_pad)
+        else:
+            wins[c] = (s + CARD_INSET + head_pad, e - CARD_INSET + head_pad)
+    return wins
 
 
 def run(cmd: list[str], label: str) -> None:
@@ -92,13 +120,50 @@ def main() -> int:
     demo_dur = ffprobe_dur(demo_raw)
     print(f"[assemble] demo_raw 長度 {demo_dur:.1f}s")
 
-    # 目標總長：旁白 + 片頭/片尾墊片，且不得超過 180s
+    overlay_mp4 = ASSETS / "overlay" / "overlay.mp4"
+    if not overlay_mp4.exists():
+        print("!! 找不到 assets/overlay/overlay.mp4 —— 請先跑 overlay/build_overlay.py")
+        return 4
+    overlay_dur = ffprobe_dur(overlay_mp4)
+
+    # ---- 卡窗由 timeline 推導（OVERLAY-ORCHESTRATION-REPORT §缺口 1）----
+    head_pad = HEAD_PAD
+    runs = aggregate_runs(tl)
+    wins = card_windows(runs, head_pad)
+    png_cards = [c for c, _, _ in runs if c != "demo"]
+    for c, s, e in runs:
+        print(f"[assemble] run card={c:10s} timeline {s:8.3f}-{e:8.3f}  "
+              f"成片窗 {wins[c][0]:8.3f}-{wins[c][1]:8.3f}")
+
+    # 目標總長：旁白 + 片頭/片尾墊片，且不得超過 180s（熔斷保留）
     vo_total = tl[-1]["end"]
-    head_pad = 1.2
     tail_pad = max(1.0, min(6.0, total_target - vo_total - head_pad))
     total = vo_total + head_pad + tail_pad
     if total > 179.5:
         raise SystemExit(f"總長 {total:.1f}s 超過 180s 上限")
+    print(f"[assemble] total={total:.3f}s (vo {vo_total:.3f} + head {head_pad} + tail {tail_pad:.3f}), "
+          f"overlay={overlay_dur:.3f}s → tpad/trim 對齊到 total")
+
+    # ---- Demo 視窗（由含 card=="demo" 的 run 推導，應等於 demo_timing.json 的 demo_window_video）----
+    demo_start, demo_end = wins["demo"]
+    demo_len = demo_end - demo_start
+    print(f"[assemble] Demo 視窗 {demo_start:.3f}s → {demo_end:.3f}s（{demo_len:.3f}s）")
+    if demo_len > demo_dur:
+        print(f"[assemble] !! Demo 視窗比錄影長（{demo_len:.1f}s > {demo_dur:.1f}s），"
+              f"尾端會凍結；錄影時請加長停頓")
+
+    # ---- seg5（card=tech）截圖視窗：S4/S7/S8 依序平分該 run 的成片時間 ----
+    tech_run = next(r for r in runs if r[0] == "tech")
+    shot_a, shot_b = tech_run[1] + head_pad, tech_run[2] + head_pad
+    shot_names = ["S4_wall_after_publish", "S7_me_panel", "S8_leaderboard_top10"]
+    n_shot = len(shot_names)
+    seg_len = (shot_b - shot_a) / n_shot
+    shot_wins: list[tuple[str, float, float]] = []
+    for i, nm in enumerate(shot_names):
+        a = shot_a + i * seg_len
+        b = shot_a + (i + 1) * seg_len if i < n_shot - 1 else shot_b
+        shot_wins.append((nm, a, b))
+        print(f"[assemble] shot {nm}: {a:.3f}-{b:.3f} ({b - a:.3f}s)")
 
     # 旁白整體平移 head_pad
     for it in tl:
@@ -107,22 +172,10 @@ def main() -> int:
     vo_wav = AUDIO / "narration_full.wav"
     concat_audio(tl, 0.0, vo_wav)
 
-    # ---- Demo 段落時間窗 ----
-    # 找 seg3 開始（第 6 段的 vo 起點）到 seg4 crisis 結束
-    seg3 = next(it for it in tl if it["seg"] == 3 and "真實" in it["vo"])
-    seg4 = [it for it in tl if it["seg"] == 4]
-    demo_start = seg3["start"] - 1.0
-    demo_end = seg4[-1]["end"] + 1.0
-    demo_len = demo_end - demo_start
-    print(f"[assemble] Demo 段落 {demo_start:.1f}s → {demo_end:.1f}s（{demo_len:.1f}s）")
-    if demo_len > demo_dur:
-        print(f"[assemble] !! Demo 段落比錄影長（{demo_len:.1f}s > {demo_dur:.1f}s），"
-              f"尾端會凍結；錄影時請加長停頓")
-
     cmd = [
         "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
         # 0: 背景色（整片）。多給 10s 緩衝：
-        # 它是 overlay 的底，若長度剛好等於 total，片尾最後幾格會因為
+        # 它是最底層的底，若長度剛好等於 total，片尾最後幾格會因為
         # 上游 EOF 而變空白（先前抽幀看到 167s 之後全空）。
         "-f", "lavfi", "-i", f"color=c={BG}:s={W}x{H}:r={FPS}:d={total + 10.0:.3f}",
         # 1: demo 錄影
@@ -130,79 +183,64 @@ def main() -> int:
         # 2: 旁白
         "-i", str(vo_wav),
     ]
-    # 3..: 字卡 PNG（迴圈輸入，最長 total）
-    card_order = ["q_self", "title", "rules", "threegood", "tech", "end"]
+    # 3..: 字卡 PNG（迴圈輸入，最長 total+5 緩衝，見舊注解：PTS 位移疊圖需要緩衝）
     card_files = []
-    for name in card_order:
+    for name in png_cards:
         p = CARDS / f"{name}.png"
         if not p.exists():
             print(f"!! 缺字卡 {p} —— 請先跑 make_cards.py")
             return 3
         card_files.append(p)
-    # 字卡輸入要比總長再長一點：字卡是用 PTS 位移疊上去的，
-    # 若輸入長度剛好等於 total，最後一張（位移到 163.8s）會沒有足夠
-    # 的畫面可疊，導致片尾變成空白。多給 5s 緩衝。
     for p in card_files:
         cmd += ["-loop", "1", "-t", f"{total + 5.0:.3f}", "-i", str(p)]
+    # seg5 截圖（同樣迴圈輸入 + 緩衝）
+    shot_paths = []
+    for nm, _, _ in shot_wins:
+        p = ASSETS / "shots" / f"{nm}.png"
+        if not p.exists():
+            print(f"!! 缺截圖 {p} —— 請先跑 capture_shots.py")
+            return 3
+        shot_paths.append(p)
+    for p in shot_paths:
+        cmd += ["-loop", "1", "-t", f"{total + 5.0:.3f}", "-i", str(p)]
+    # 動態疊卡（ProRes 4444，帶 alpha）
+    cmd += ["-i", str(overlay_mp4)]
 
-    # ---- 字卡時間窗 ----
-    def window(card: str) -> tuple[float, float]:
-        if card == "q_self":
-            return 0.0, 20.0
-        if card == "title":
-            return 20.0, 36.0
-        if card == "rules":
-            return 36.0, demo_start
-        if card == "threegood":
-            return demo_end, min(total, demo_end + 14.0)
-        if card == "tech":
-            # 留 0.35s 交錯緩衝，避免與下一張的 enable 區間在邊界重疊
-            return min(total, demo_end + 14.0), total - 8.0
-        # 收尾字卡：撐到最後一刻（不淡出，避免片尾留一段空白）
-        return total - 8.0, total + 1.0
-
-    def _windows_for_debug() -> list[tuple[str, float, float]]:
-        out = []
-        for nm in card_order:
-            x, y = window(nm)
-            out.append((nm, max(0.0, x), min(total, y)))
-        return out
+    IDX_CARD0 = 3
+    IDX_SHOT0 = IDX_CARD0 + len(card_files)
+    IDX_OVL = IDX_SHOT0 + len(shot_paths)
 
     # ---- filter ----
-    # demo 畫面：640x1138 → 放大到 1080 寬（1.6875x）→ 1138*1.6875=1920.4 → 1080x1920
+    # demo 畫面：scale+crop 填滿 1080x1920
     f: list[str] = []
     f.append(f"[1:v]scale={W}:{H}:force_original_aspect_ratio=increase,"
              f"crop={W}:{H},setsar=1,fps={FPS},format=yuv420p[demo]")
-    # demo 只在 demo_start..demo_end 出現，其餘用背景色
+    # demo 只在 demo 視窗出現，其餘用背景色
     f.append(f"[demo]trim=0:{demo_len:.3f},setpts=PTS-STARTPTS+{demo_start:.3f}/TB[demoT]")
     f.append(f"[0:v]trim=0:{total:.3f},setpts=PTS-STARTPTS[bg]")
     f.append(f"[bg][demoT]overlay=0:0:eof_action=pass[v1]")
 
-    # 字卡疊加（淡入淡出）
+    # 字卡疊加（淡入淡出）。卡窗 = timeline 推導（見 card_windows）。
     cur = "v1"
-    for i, name in enumerate(card_order):
-        a, b = window(name)
+    for i, name in enumerate(png_cards):
+        a, b = wins[name]
         a = max(0.0, a)
         b = min(total, b)
+        is_last = (name == png_cards[-1])
+        if is_last:
+            b = total  # 尾卡撐到片尾、不淡出，避免片尾留一段空白（保留舊行為）
         if b - a < 1.0:
             continue
-        idx = 3 + i
+        idx = IDX_CARD0 + i
         tag = f"c{i}"
-        # 第一張字卡（q_self）從 0 秒就開始 → **不能淡入**，
-        # 否則影片開頭 0.6s 會是純底色（抽幀會看到一張全空畫面）。
-        # 淡入／淡出都必須寫在**位移之後**的時間軸上：
-        # 先把 setpts 位移好，再對位移後的串流做 fade，
-        # 否則 fade 的 st 會落在原始（未位移）的時間軸上 ——
-        # 實測：`fade=t=in:st=163.804` 放在 setpts 之前，會讓整張字卡
-        # 從 163.8s 之後完全不輸出，片尾變成一片空白。
-        # 正確順序：format → setpts(位移) → fade(用位移後的相對秒數)。
-        # 位移後串流的「相對秒數 0」＝ 絕對時間 a，
-        # 所以淡入 st 固定用 0，淡出 st 用 (b - a - 0.6)。
-        fade_in = "" if a <= 0.01 else "fade=t=in:st=0:d=0.6:alpha=1,"
-        # 最後一張字卡撐到片尾 → 不淡出，避免片尾留一段空白
-        is_last = (name == card_order[-1])
+        # 淡入／淡出必須寫在 setpts 位移「之後」，且 st 用**絕對秒數**：
+        # setpts=PTS-STARTPTS+a/TB 之後，串流的 pts 已是絕對時間（a+k/25），
+        # 所以 fade=t=in 用 st=a、fade=t=out 用 st=b-0.6。
+        # （實測：若 fade 放在 setpts 前、或用相對 st=(b-a)-0.6，
+        #  全部幀的 pts 都 > st+d，fade out 會把整張卡 alpha 降成 0 → 完全不輸出。）
+        fade_in = "" if a <= 0.01 else f"fade=t=in:st={a:.3f}:d=0.6:alpha=1,"
         fade_out = "" if is_last else \
-            f"fade=t=out:st={max(0.0, (b - a) - 0.6):.3f}:d=0.6:alpha=1,"
+            f"fade=t=out:st={max(0.0, b - 0.6):.3f}:d=0.6:alpha=1,"
         f.append(
             f"[{idx}:v]format=rgba,"
             f"setpts=PTS-STARTPTS+{a:.3f}/TB,"
@@ -212,7 +250,36 @@ def main() -> int:
         f.append(f"[{cur}][{tag}]overlay=0:0:eof_action=pass:enable='between(t,{a:.3f},{b:.3f})'[v{tag}]")
         cur = f"v{tag}"
 
-    # 字幕：固定在最底部的專屬橫帶，並加一層半透明底，
+    # ---- seg5 截圖疊加（在字卡之上；scale=contain 到 1080x1920，底色 pad）----
+    for j, (nm, a, b) in enumerate(shot_wins):
+        idx = IDX_SHOT0 + j
+        tag = f"s{j}"
+        # 同字卡：setpts 之後 pts 為絕對時間，fade 的 st 用絕對秒數
+        fade_in = "" if a <= 0.01 else f"fade=t=in:st={a:.3f}:d=0.6:alpha=1,"
+        fade_out = f"fade=t=out:st={max(0.0, b - 0.6):.3f}:d=0.6:alpha=1,"
+        f.append(
+            f"[{idx}:v]format=rgba,"
+            f"scale={W}:{H}:force_original_aspect_ratio=decrease,"
+            f"pad={W}:{H}:(ow-iw)/2:(oh-ih)/2:color={BG},setsar=1,"
+            f"setpts=PTS-STARTPTS+{a:.3f}/TB,"
+            f"{fade_in}{fade_out}"
+            f"null[{tag}]"
+        )
+        f.append(f"[{cur}][{tag}]overlay=0:0:eof_action=pass:enable='between(t,{a:.3f},{b:.3f})'[v{tag}]")
+        cur = f"v{tag}"
+
+    # ---- 動態疊卡 overlay.mp4（ProRes 4444 yuva，自動用 alpha 疊加）----
+    # 疊在「字幕帶之前那一層」之後、字幕帶之前；字幕永遠最後。
+    # 長度對齊：trim 到 total+2 後再 tpad clone 2s ——
+    # 無論 overlay 比 total 長或短，串流都 ≥ total，EOF 不會提前結束。
+    f.append(
+        f"[{IDX_OVL}:v]fps={FPS},trim=0:{total + 2.0:.3f},setpts=PTS-STARTPTS,"
+        f"tpad=stop_mode=clone:stop_duration=2.0[ovl]"
+    )
+    f.append(f"[{cur}][ovl]overlay=0:0:eof_action=pass[v_ovl]")
+    cur = "v_ovl"
+
+    # 字幕：固定在最底部的專屬橫帶（永遠最後疊），並加一層半透明底，
     # 避免和字卡的文字重疊（先前抽幀看到字幕蓋在字卡文字上）。
     srt = AUDIO / "subtitles.srt"
     shifted = AUDIO / "subtitles_shifted.srt"

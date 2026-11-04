@@ -18,9 +18,14 @@ demo_steps.py — 《好好說話》真實操作畫面腳本（供 record_demo.p
 from __future__ import annotations
 
 import os
+import re
+import time
 
 # ---- 節奏參數（秒）。可用環境變數覆寫，方便調整到剛好 3 分鐘 ----
 SPEED = float(os.environ.get("DEMO_SPEED", "1.0"))
+
+# ---- record_demo.py --with-wall 時設為 True：demo 流程改走「含好話牆」版本 ----
+WITH_WALL = False
 
 
 def _t(sec: float) -> None:
@@ -104,24 +109,38 @@ def load_beats() -> dict:
     tl_path = Path(__file__).resolve().parent / "assets" / "audio" / "timeline.json"
     try:
         tl = json.loads(tl_path.read_text(encoding="utf-8"))
+        # ★ demo 視窗以 card=="demo" 的段為準（組裝公式：起點−1s 到結束+1s）。
+        #   不能用 seg==4 取最後一段：threegood 卡也掛在 seg 4，會把視窗多算 ~13s。
+        demo_segs = [t for t in tl if t.get("card") == "demo"]
         seg3 = [t for t in tl if t["seg"] == 3]
-        seg4 = [t for t in tl if t["seg"] == 4]
+        seg4 = [t for t in tl if t["seg"] == 4 and t.get("card") == "demo"]
+        w0 = min(t["start"] for t in demo_segs) if demo_segs else 43.15
+        w1 = max(t["end"] for t in demo_segs) if demo_segs else 128.226
         return {
-            "demo_total": (seg4[-1]["end"] if seg4 else 139.5)
-                          - (seg3[0]["start"] if seg3 else 42.6) + 2.0,
+            "demo_total": w1 - w0 + 2.0,
             "seg3": [round(t["dur"], 2) for t in seg3],
             "seg4": [round(t["dur"], 2) for t in seg4],
         }
     except Exception:
-        return {"demo_total": 101.0, "seg3": [7.0] * 9, "seg4": [10.5] * 3}
+        return {"demo_total": 87.076, "seg3": [7.0] * 9, "seg4": [10.5] * 2}
 
 
 BEATS = load_beats()
 
 # 起始網址（由 record_demo.py 設定；不能依賴 page.url，新分頁是 about:blank）
 ENTRY_URL = {"url": "http://127.0.0.1:3210/"}
-# 錄影期間累積的「已停留秒數」，用來把節奏撐到 demo_total
-_STATE = {"elapsed": 0.0, "marks": {}}
+# 錄影期間的 wall-clock 起點（run() 開頭設），marks/evidence 都從這裡算
+_STATE = {"t0": 0.0, "marks": {}, "evidence": {}}
+
+
+def get_state() -> dict:
+    """給 record_demo.py 寫進 demo_timing.json 用（步驟標記 + 牆流程防呆證據）。"""
+    return {"marks": dict(_STATE["marks"]), "evidence": dict(_STATE["evidence"])}
+
+
+def elapsed_now() -> float:
+    """run() 開始至今的 wall-clock 秒數（含 wait_for_selector 等真實等待）。"""
+    return time.time() - _STATE["t0"]
 
 
 def hold(page, sec: float) -> None:
@@ -134,7 +153,6 @@ def hold(page, sec: float) -> None:
       （真實使用者閱讀時也會微幅捲動），但**不改變任何示範內容**。
     """
     dur = sec * SPEED
-    _STATE["elapsed"] += dur
     if dur < 1.5:
         page.wait_for_timeout(int(dur * 1000))
         return
@@ -157,19 +175,25 @@ def hold(page, sec: float) -> None:
 
 
 def mark(name: str) -> None:
-    _STATE["marks"][name] = round(_STATE["elapsed"], 2)
+    _STATE["marks"][name] = round(elapsed_now(), 2)
 
 
 def pad_to_total(page, log) -> None:
     """保險機制：若真實互動的節奏仍短於旁白視窗，補足差額。
 
+    ★ 用 wall-clock（elapsed_now）而不是 hold 累計，因為 wait_for_selector /
+    wait_for_function / 打字時間也會佔去錄影秒數，只有 wall-clock 才是
+    demo_raw.mp4 的真實長度，才是 assemble.py 視窗（raw[0:demo_len]）會看到的。
+
     設計原則：**寧可讓每一步多做一點真實停留，也不要靠假捲動灌時間**。
-    這裡只當最後保險，正常情況下缺口應該接近 0（每一步已按旁白長度配速）。
     補足時用慢速捲動來回，畫面持續有位移，不會定格。
     """
-    need = BEATS["demo_total"] - _STATE["elapsed"]
+    el = elapsed_now()
+    need = BEATS["demo_total"] - el
     if need <= 2.0:
-        log(f"   節奏足夠（{_STATE['elapsed']:.1f}s / 目標 {BEATS['demo_total']:.1f}s）")
+        log(f"   節奏足夠（{el:.1f}s / 目標 {BEATS['demo_total']:.1f}s）")
+        if el > BEATS["demo_total"] + 0.5:
+            log(f"   !! 超出視窗 {el - BEATS['demo_total']:.1f}s —— 成片尾端會被 trim，請刪減步驟")
         return
     log(f"   !! 仍缺 {need:.1f}s，以慢速捲動補足（畫面持續變化，非定格）")
     steps = max(2, int(round(need / 5.0)))
@@ -177,13 +201,250 @@ def pad_to_total(page, log) -> None:
     for i in range(steps):
         y = 0 if i % 2 else 1100
         slow_scroll(page, y, steps=14, step_pause=per / 14.0)
-        _STATE["elapsed"] += per
 
 
 def run(page, ui, log) -> None:
-    """整段 Demo 流程 —— 對應影片結構的 00:50–02:00。"""
-    _STATE["elapsed"] = 0.0
+    """進入點：--with-wall 走含好話牆的流程，否則走舊版流程。"""
+    _STATE["t0"] = time.time()
     _STATE["marks"] = {}
+    _STATE["evidence"] = {}
+    if WITH_WALL:
+        run_wall(page, ui, log)
+    else:
+        run_legacy(page, ui, log)
+
+
+# ---------------------------------------------------------------------------
+# 好話牆版 demo 流程（--with-wall）
+# 與舊版差異：刪除「轉送面板」「收藏清單」兩段低價值步驟來騰時間給牆流程，
+# 危機護欄步驟絕對保留。牆/排行榜資料由 mock_kv.cjs seed（虛構）。
+# ---------------------------------------------------------------------------
+
+# 牆上鼓勵話：≥10 字、含感受詞（聽起來/難受/說出來/不容易），會通過
+# screen.validateEncourage（lint + bigram 重疊 + ACK_WORDS）
+ENC_TEXT = "聽起來三天沒回訊息，心裡一定很難受，你願意說出來已經很不容易了。"
+# 要鼓勵的 seed 貼文（mock_kv.cjs種的 love 主題貼文）
+ENC_TARGET = "三天沒回我訊息"
+
+# 個資 pattern（與 app/lib/screen.js findPII 同款）——錄影防呆掃描用
+PII_RE = re.compile(
+    r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
+    r"|(?<![\d.])(?:09\d{8}|0\d{1,2}-?\d{6,8}|\+886\s?\d{9})(?![\d.])"
+    r"|https?://|www\.|\.(?:com|tw|net|org|io|me|shop|club)\b"
+    r"|@[A-Za-z0-9._]{3,30}\b",
+    re.I,
+)
+HANDLE_RE = re.compile(r"^牆友#[A-Z0-9-]{4}$")
+
+
+def _toast_text(page) -> str:
+    try:
+        return page.evaluate(
+            "() => { const t = document.getElementById('toast');"
+            " return t && !t.hidden ? t.textContent : ''; }")
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def wait_toast_points(page, timeout: int = 20000) -> str:
+    """等 #toast 出現且內容含「+N 分」，回傳 toast 全文（掛牆/鼓勵共用）。"""
+    page.wait_for_function(
+        "() => { const t = document.getElementById('toast');"
+        " return t && !t.hidden && /\\+\\s*\\d+\\s*分/.test(t.textContent); }",
+        timeout=timeout,
+    )
+    return _toast_text(page)
+
+
+def collect_wall_evidence(page) -> dict:
+    """抓牆/個人面板/排行榜的 DOM 文字做防呆掃描（無個資、handle 格式）。"""
+    ev = page.evaluate("""() => ({
+        wallCount: document.querySelectorAll('#wall-list .wall-item').length,
+        encCount: document.querySelectorAll('#wall-list .enc-item').length,
+        wallTexts: [...document.querySelectorAll('#wall-list .wall-item')].map(li => li.innerText),
+        encHandles: [...document.querySelectorAll('#wall-list .enc-handle')].map(e => e.textContent.trim()),
+        boardNames: [...document.querySelectorAll('#board-list .board-name')].map(e => e.textContent.trim()),
+        mePts: document.getElementById('me-pts').textContent,
+        meWeekPts: document.getElementById('me-week-pts').textContent,
+        meTitle: document.getElementById('me-title').textContent,
+        meRank: document.getElementById('me-rank').textContent,
+        meWallCount: document.querySelectorAll('#me-wall .wall-item').length,
+    })""")
+    pii_hits = [t[:60] for t in ev.get("wallTexts", []) if PII_RE.search(t)]
+    handles = ev.get("encHandles", []) + ev.get("boardNames", [])
+    handles_ok = all(HANDLE_RE.match(h) for h in handles) if handles else False
+    _STATE["evidence"].update({
+        "wall_count": ev.get("wallCount"),
+        "enc_count": ev.get("encCount"),
+        "me_pts": ev.get("mePts"),
+        "me_week_pts": ev.get("meWeekPts"),
+        "me_title": ev.get("meTitle"),
+        "me_rank": ev.get("meRank"),
+        "me_wall_count": ev.get("meWallCount"),
+        "board_names": ev.get("boardNames"),
+        "pii_clean": not pii_hits,
+        "pii_hits": pii_hits,
+        "handles_ok": handles_ok,
+    })
+    return _STATE["evidence"]
+
+
+def run_wall(page, ui, log) -> None:
+    """含好話牆的 demo 流程。全部步驟 wall-clock 必須塞進 BEATS['demo_total'] 視窗。"""
+    log(f"   節拍目標 {BEATS['demo_total']:.1f}s（with-wall：牆流程 + 危機護欄）")
+
+    # ==================================================================
+    # A. 首頁（乾淨、無個資）--------------------------------------------
+    # ==================================================================
+    log("A. 首頁")
+    page.goto(ENTRY_URL["url"], wait_until="domcontentloaded")
+    page.wait_for_selector("#input", state="visible", timeout=20000)
+    hold(page, 1.8)
+    slow_scroll(page, 260, steps=14)
+    hold(page, 0.9)
+    slow_scroll(page, 0, steps=10)
+    hold(page, 1.0)
+    mark("A_home")
+
+    # ==================================================================
+    # B. 輸入心事（真實打字）--------------------------------------------
+    # ==================================================================
+    log("B. 輸入心事")
+    mind = (
+        "今天開會我講錯話，回家路上一直想，"
+        "覺得自己很沒用。同事一定覺得我很雷。"
+    )
+    inp = page.locator("#input")
+    inp.wait_for(state="visible", timeout=15000)
+    human_type(page, inp, mind, delay_ms=95)
+    hold(page, 0.8)
+    mark("B_typed")
+
+    # ==================================================================
+    # C. 送出 → 情緒辨識 → 三段好話 --------------------------------------
+    # ==================================================================
+    log("C. 送出")
+    page.locator("#btn-submit").click()
+    hold(page, 0.6)   # 讓 loading 動畫被錄進去（證明真的有跑 AI）
+    page.locator("#result-body").wait_for(state="visible", timeout=90000)
+    log("   結果已出現")
+    hold(page, 0.7)
+    scroll_to(page, "#result", block="start", duration=1.2)
+    hold(page, 0.4)
+    hold(page, 0.9); scroll_to(page, "#emotion-tag", duration=1.0); hold(page, 0.9)
+    for sel, wait in (("#seg-accept", 1.9), ("#seg-good", 2.2), ("#seg-step", 1.9)):
+        try:
+            page.locator(sel).wait_for(state="visible", timeout=8000)
+            hold(page, 0.5); scroll_to(page, sel, duration=1.0); hold(page, wait)
+        except Exception as exc:  # noqa: BLE001
+            log(f"   !! {sel} 未出現：{exc}")
+    mark("C_result")
+
+    # ==================================================================
+    # D. 複製 -------------------------------------------------------------
+    # ==================================================================
+    log("D. 複製這句")
+    try:
+        scroll_to(page, "button[data-act='copy']", duration=1.0); hold(page, 0.3)
+        page.locator("button[data-act='copy']").click()
+        hold(page, 2.0)          # 讓 toast 出現
+    except Exception as exc:  # noqa: BLE001
+        log(f"   !! 複製失敗：{exc}")
+    mark("D_copy")
+
+    # ==================================================================
+    # E. 匿名掛上好話牆（主題選「工作」→ toast +N 分 → 牆上出現新貼文）---
+    # ==================================================================
+    log("E. 匿名掛上好話牆")
+    scroll_to(page, "#btn-publish", duration=1.1); hold(page, 0.3)
+    page.select_option("#publish-topic", "work")
+    hold(page, 0.6)              # 讓下拉選「工作」清楚入鏡
+    page.locator("#btn-publish").click()
+    toast_pub = wait_toast_points(page, timeout=20000)
+    _STATE["evidence"]["toast_publish"] = toast_pub
+    log(f"   掛牆 toast：{toast_pub}")
+    hold(page, 1.2)              # toast 壽命 2.2s，停留讓 +N 分 入鏡
+    scroll_to(page, "#wall-section", duration=1.2)
+    page.wait_for_function(
+        "() => document.querySelectorAll('#wall-list .wall-item').length >= 4",
+        timeout=20000)           # 3 篇 seed + 剛掛的 1 篇
+    hold(page, 2.0)
+    mark("E_publish")
+
+    # ==================================================================
+    # F. 在牆上一篇 seed 貼文留一句會過審的鼓勵 --------------------------
+    # ==================================================================
+    log("F. 鼓勵別人一篇")
+    item = page.locator(".wall-item", has_text=ENC_TARGET).first
+    item.scroll_into_view_if_needed()
+    hold(page, 0.3)
+    human_type(page, item.locator(".enc-input"), ENC_TEXT, delay_ms=80)
+    hold(page, 0.3)
+    item.locator(".enc-send").click()
+    toast_enc = wait_toast_points(page, timeout=20000)
+    _STATE["evidence"]["toast_encourage"] = toast_enc
+    log(f"   鼓勵 toast：{toast_enc}")
+    hold(page, 1.2)
+    page.locator(".wall-item", has_text=ENC_TARGET).locator(".enc-item").first \
+        .wait_for(state="visible", timeout=20000)
+    hold(page, 2.0)              # 鼓勵出現在牆上，停留 2s
+    mark("F_encourage")
+
+    # ==================================================================
+    # G. 我的好話紀錄（分數/本週稱號/我的牆上貼文）→ 本週排行榜 -----------
+    # ==================================================================
+    log("G. 我的紀錄 / 排行榜")
+    scroll_to(page, "#me-panel", duration=1.2); hold(page, 2.0)
+    scroll_to(page, "#me-wall", duration=1.0); hold(page, 1.2)
+    scroll_to(page, "#board", duration=1.2); hold(page, 2.0)
+    mark("G_me_board")
+    try:
+        ev = collect_wall_evidence(page)
+        log(f"   防呆：牆 {ev['wall_count']} 篇 / 鼓勵 {ev['enc_count']} 句，"
+            f"me={ev['me_pts']}分 称號={ev['me_title']} 排名={ev['me_rank']}，"
+            f"pii_clean={ev['pii_clean']} handles_ok={ev['handles_ok']}")
+        if ev["pii_hits"]:
+            log(f"   !! 牆上文字疑似含個資：{ev['pii_hits']}")
+        if not ev["handles_ok"]:
+            log(f"   !! handle/排行榜名稱格式異常：{ev['board_names']}")
+    except Exception as exc:  # noqa: BLE001
+        log(f"   !! 牆防呆掃描失敗：{exc}")
+
+    # ==================================================================
+    # H. 危機護欄（真實操作！絕對保留）------------------------------------
+    # ==================================================================
+    log("H. 危機護欄")
+    slow_scroll(page, 0, steps=16)
+    hold(page, 0.5)
+    inp = page.locator("#input")
+    human_type(page, inp, "我真的撐不下去了，不想活了。", delay_ms=115)
+    hold(page, 0.8)
+    page.locator("#btn-submit").click()
+    page.wait_for_function(
+        "() => { const c = document.getElementById('crisis');"
+        " return c && !c.hidden; }",
+        timeout=40000,
+    )
+    hold(page, 0.9)
+    scroll_to(page, "#crisis", block="start", duration=1.2); hold(page, 1.8)   # 讓 1925/1995/1980 清楚入鏡
+    scroll_to(page, "#hotlines", duration=1.0)
+    hold(page, 2.2)
+    mark("H_crisis")
+
+    # ==================================================================
+    # I. 收尾：回到輸入區 --------------------------------------------------
+    # ==================================================================
+    log("I. 收尾")
+    slow_scroll(page, 0, steps=16)
+    hold(page, 1.0)
+    mark("I_end")
+
+    pad_to_total(page, log)
+    log(f"   實際節奏 {elapsed_now():.1f}s / 目標 {BEATS['demo_total']:.1f}s")
+
+
+def run_legacy(page, ui, log) -> None:
+    """舊版 Demo 流程（不含牆）—— 對應影片結構的 00:50–02:00。"""
     log(f"   節拍目標 {BEATS['demo_total']:.1f}s（seg3={len(BEATS['seg3'])}段 seg4={len(BEATS['seg4'])}段）")
 
     # ==================================================================
@@ -328,4 +589,4 @@ def run(page, ui, log) -> None:
     hold(page, 2.0)
 
     pad_to_total(page, log)
-    log(f"   實際節奏 {_STATE['elapsed']:.1f}s / 目標 {BEATS['demo_total']:.1f}s")
+    log(f"   實際節奏 {elapsed_now():.1f}s / 目標 {BEATS['demo_total']:.1f}s")
