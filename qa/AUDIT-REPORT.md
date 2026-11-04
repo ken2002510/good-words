@@ -249,3 +249,49 @@ Demo 段內最長完全靜止：12.5s —— 為「送出後等待 AI 推論 + �
 **最需要提醒使用者的一點**：
 `docs/參賽切結書...docx` 的 **5 列簽名欄仍為空白**（依設計不代簽）。
 **報名前必須由團隊成員本人親筆簽名。**
+
+---
+
+# T7 補充審查（2026-11-04）：上架版升級為雲端 LLM（NVIDIA NIM）
+
+審查日期：2026-11-04
+動機：Lead 取得 NVIDIA API key，要求上架版（Vercel）實際使用雲端 LLM，
+並補強「AI 技術整合」與創新性（改寫模式、多輪對話）。
+
+## 架構變更
+
+| 項目 | 修改前 | 修改後 |
+|---|---|---|
+| AI 軌 | ollama → cloud(OpenAI) → rules | ollama → **NVIDIA NIM** → cloud → rules（四軌） |
+| 部署預設 | 永遠 rules | **有 `NVIDIA_API_KEY` → nvidia 軌**，逾時 6.5s 內自動降級 rules |
+| 模式 | 只有 chat | chat + **rewrite（重話改寫）** |
+| 對話 | 單輪 | **多輪**（前端 localStorage 最近 4 輪，後端消毒 ≤6 輪 ×300 字，不儲存） |
+| key 管理 | — | **只放環境變數**（本機 `NVIDIA_API_KEY`/`NVKEY`；Vercel 後台 Environment Variables）；repo 內只有 `nvapi-...` 佔位字，無任何真實 key |
+
+## 安全不變的保證（回歸全綠）
+
+- 危機護欄仍在第 0 步、不經任何模型；**rewrite 模式下危機字串照樣轉介**（實測「我不想活了」+ mode=rewrite → crisis=true + 1925/1995/1980/119）
+- 模型輸出仍過 `lint()` 反毒雞湯；不過即降級
+- 無 key 時 `force=nvidia` 正確降級 rules（實測）
+- `run-tests.js` 正常模式 **77/77**、`--no-ollama` **76/76**、新功能腳本 `qa/_local_new_features.mjs` **12/12**
+- 說明書 `verify_spec.py` ALL PASS（正文 4871 字 ≤5000；PDF 10 頁 ≤10MB）
+
+## 待辦（部署時）
+
+1. Vercel Project → Settings → Environment Variables 加 `NVIDIA_API_KEY`（祕密）
+2. Redeploy 後 `GET /api/health` 應回 `engines.nvidia.enabled=true`、`model=nvidia/nemotron-3.5-bolt-e4b`
+3. 外網實測 `POST /api/respond` 應回 `meta.engine=nvidia`
+4. 若 key 失效 → 自動降級 rules，網站仍完整可用（符合評審期間連結必須可用的硬規定）
+
+### 模型選擇實測（2026-11-04，`qa/_nv_bench.mjs` v2，production 同款 prompt/parser/lint）
+
+門檻：≤6.5s（Vercel function 10s 上限內預算）且 parse OK 且 lint 過。
+
+| 模型 | 結果 | 平均延遲 |
+|---|---|---|
+| **nvidia/nemotron-3.5-bolt-e4b** | **10/10 PASS（擴大案例後）** | **avg 2.4s、最慢 4.7s** ✅ 選為預設 |
+| nvidia/nemotron-3.5-lightning-30b-a3b | 2/4（會把禁語清單複述回來，被 lint 擋） | 5.3s |
+| z-ai/glm-5.3-flash | 0/4（同上問題 + 延遲超預算） | 7.9s |
+| 其餘候選（gpt-oss-20b、llama-3.2-11b、kimi-k2.6 等） | TIMEOUT 或此 key 無權限呼叫 | — |
+
+備註：此 key 對部分 NIM 模型回「Function not found for account」——屬 key 權限範圍，非我方錯誤。

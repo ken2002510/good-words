@@ -195,9 +195,9 @@ def card_tech() -> Image.Image:
     d.text((100, 300), "技術與隱私", font=font(80, bold=True), fill=CREAM)
 
     items = [
-        ("本機 AI 推論", "在你自己的電腦上跑，不上傳"),
-        ("離線可用", "沒有網路也能給出回應"),
-        ("免費部署", "評審期間連結持續活著"),
+        ("本機 AI 推論", "Ollama 在你的電腦上跑，心事不上傳"),
+        ("線上雲端 AI", "雲端模型即時生成回應"),
+        ("自動降級", "雲端不可用時改規則引擎，永遠有回應"),
         ("免登入 · 免安裝", "開網頁就能用，手機優先"),
     ]
     y = 540
@@ -209,8 +209,8 @@ def card_tech() -> Image.Image:
 
     d.rounded_rectangle([90, y + 20, W - 90, y + 200], radius=28,
                         fill=(38, 31, 27), outline=(120, 100, 88), width=2)
-    d.text((130, y + 60), "你的心事", font=font(44), fill=MUTED)
-    d.text((130, y + 122), "不會離開你的裝置。", font=font(52, bold=True), fill=GOLD)
+    d.text((130, y + 60), "本機版：心事不離開你的裝置", font=font(40), fill=MUTED)
+    d.text((130, y + 122), "線上版：僅用於這次回應，不保存", font=font(44, bold=True), fill=GOLD)
     return img
 
 

@@ -37,13 +37,44 @@
     favBtnLabel: $('fav-btn-label'),
     btnFav: $('btn-favorites'),
     toast: $('toast'),
+    btnClearHistory: $('btn-clear-history'),
   };
 
   var MAXLEN = 2000;
   var FAV_KEY = 'hsh.favorites.v1';
+  var HIST_KEY = 'hsh.history.v1';
   var current = null;      // 目前顯示的回應
   var audience = 'friend'; // 轉送對象
   var busy = false;
+  var mode = 'chat';       // 'chat' 傾訴 | 'rewrite' 改寫重話
+
+  // ── 對話歷史（只存在本機 localStorage，送出時帶給後端，後端不儲存）──
+
+  function loadHistory() {
+    try {
+      var raw = localStorage.getItem(HIST_KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+
+  function saveHistory(arr) {
+    try {
+      localStorage.setItem(HIST_KEY, JSON.stringify(arr.slice(-8))); // 最多 4 輪
+    } catch (e) { /* 瀏覽器不允許就算了 */ }
+  }
+
+  function pushHistory(userText, assistantText) {
+    var h = loadHistory();
+    h.push({ role: 'user', content: String(userText).slice(0, 300) });
+    if (assistantText) h.push({ role: 'assistant', content: String(assistantText).slice(0, 300) });
+    saveHistory(h);
+    refreshClearBtn();
+  }
+
+  function refreshClearBtn() {
+    el.btnClearHistory.hidden = loadHistory().length === 0;
+  }
 
   // ── 小工具 ────────────────────────────────────────
 
@@ -241,9 +272,11 @@
 
   function engineLabel(meta) {
     if (!meta) return '';
-    var src = meta.engine === 'ollama'
-      ? '本機 AI 模型（' + (meta.model || '') + '）'
-      : (meta.engine === 'cloud' ? '雲端 AI' : '規則式引擎');
+    var src;
+    if (meta.engine === 'ollama') src = '本機 AI 模型（' + (meta.model || '') + '）';
+    else if (meta.engine === 'nvidia') src = '雲端 AI 模型（NVIDIA NIM · ' + (meta.model || '') + '）';
+    else if (meta.engine === 'cloud') src = '雲端 AI 模型（' + (meta.model || '') + '）';
+    else src = '規則式引擎';
     var t = meta.elapsedMs ? (meta.elapsedMs / 1000).toFixed(1) + ' 秒' : '';
     var note = '這句由「' + src + '」產生' + (t ? '，用了 ' + t : '') + '。';
     if (meta.degraded && meta.engine !== 'safety') {
@@ -337,7 +370,7 @@
     fetch('/api/respond', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: text }),
+      body: JSON.stringify({ text: text, mode: mode, history: loadHistory() }),
     })
       .then(function (r) {
         if (!r.ok) return r.json().then(function (j) { throw new Error(j.error || '伺服器回應異常'); });
@@ -346,8 +379,13 @@
       .then(function (data) {
         clearInterval(tick);
         setBusy(false);
-        if (data.crisis) renderCrisis(data);
-        else renderResult(data);
+        if (data.crisis) {
+          renderCrisis(data);
+          // 危機內容不寫進歷史（隱私：不拿去給模型看）
+        } else {
+          renderResult(data);
+          pushHistory(text, [data.accept, data.goodword, data.smallstep].filter(Boolean).join('\n'));
+        }
       })
       .catch(function (err) {
         clearInterval(tick);
@@ -426,12 +464,46 @@
     el.counter.style.color = n > MAXLEN * 0.9 ? 'var(--accent)' : '';
   });
 
+  // ── 模式切換：傾訴心事 / 改寫重話 ──────────────────
+
+  var PLACEHOLDER = {
+    chat: '例如：今天開會我講錯話，回家路上一直想，覺得自己很沒用。',
+    rewrite: '貼上一句你對自己或別人說過的重話，例如：我怎麼這麼沒用。',
+  };
+  var HINT = {
+    chat: '不用寫完整，一句話也可以',
+    rewrite: '把那句話原樣貼上，AI 會幫你改成說得出口的版本',
+  };
+
+  function setMode(m) {
+    mode = m === 'rewrite' ? 'rewrite' : 'chat';
+    Array.prototype.forEach.call(document.querySelectorAll('.mode-btn'), function (b) {
+      var on = b.getAttribute('data-mode') === mode;
+      b.classList.toggle('is-on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    el.input.setAttribute('placeholder', PLACEHOLDER[mode]);
+    $('input-hint').textContent = HINT[mode];
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.mode-btn'), function (b) {
+    b.addEventListener('click', function () { setMode(b.getAttribute('data-mode')); });
+  });
+
   Array.prototype.forEach.call(document.querySelectorAll('.chip'), function (c) {
     c.addEventListener('click', function () {
-      el.input.value = c.getAttribute('data-fill') || '';
+      el.input.value = c.getAttribute('data-fill-' + mode) || c.getAttribute('data-fill-chat') || '';
       el.input.dispatchEvent(new Event('input'));
       el.input.focus();
     });
+  });
+
+  // ── 清除對話紀錄（本機） ────────────────────────────
+
+  el.btnClearHistory.addEventListener('click', function () {
+    saveHistory([]);
+    refreshClearBtn();
+    toast('對話紀錄已清除（只清這台裝置）');
   });
 
   el.result.addEventListener('click', function (ev) {
@@ -520,13 +592,19 @@
 
   el.counter.textContent = '0 / ' + MAXLEN;
   renderFavs();
+  refreshClearBtn();
 
   // 顯示引擎狀態（讓評審看到 AI 真的在跑；不揭露任何個資）
   fetch('/api/health').then(function (r) { return r.json(); }).then(function (h) {
-    var o = h.engines && h.engines.ollama;
+    var eng = (h.engines) || {};
+    var o = eng.ollama;
+    var n = eng.nvidia;
     if (o && o.alive) {
       el.input.setAttribute('placeholder',
         '把心裡的話寫下來，不用修飾。（本機 AI 已就緒：' + (o.model || '') + '）');
+    } else if (n && n.enabled) {
+      el.input.setAttribute('placeholder',
+        '把心裡的話寫下來，不用修飾。（雲端 AI 已就緒：' + (n.model || 'NVIDIA NIM') + '）');
     }
   }).catch(function () { /* 不重要，失敗就算了 */ });
 })();

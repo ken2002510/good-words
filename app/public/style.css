@@ -178,6 +178,23 @@ textarea:focus {
 }
 .hint { color: var(--ink-faint); font-size: 13px; margin: 0; }
 .counter { font-variant-numeric: tabular-nums; flex: none; }
+.hint-row { display: inline-flex; align-items: center; gap: 10px; }
+
+/* 模式切換：傾訴心事 / 改寫重話 */
+.mode-switch {
+  display: flex; gap: 8px; margin: 0 0 12px;
+}
+.mode-btn {
+  font: inherit; font-size: 14px; font-weight: 700;
+  padding: 8px 16px; min-height: 38px;
+  color: var(--ink-soft); background: var(--bg-soft);
+  border: 1px solid var(--line); border-radius: 999px;
+  cursor: pointer; transition: all .15s;
+}
+.mode-btn:hover { border-color: var(--accent); color: var(--accent); }
+.mode-btn.is-on {
+  color: #fff; background: var(--accent); border-color: var(--accent);
+}
 
 .chips {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px;

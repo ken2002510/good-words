@@ -46,21 +46,39 @@ node app/server.js
 
 ---
 
-## AI 設計（為什麼不會白畫面）
+## AI 設計（四軌自動降級，為什麼不會白畫面）
 
-三個引擎，順序固定、自動降級：
+順序固定、逐軌降級：
 
-1. **本機 Ollama**（`qwen3:4b-instruct`）— 免費、離線、不上傳，展示時最強
-2. **雲端 API** — 只有設定 key 才啟用
-3. **規則式引擎** — **保證一定有回應**
+1. **本機 Ollama**（`qwen3:4b-instruct`）— 免費、離線、不上傳，本機展示時最強
+2. **NVIDIA NIM 雲端 LLM**（`integrate.api.nvidia.com`）—— **上架版（Vercel）主力**，key 只放環境變數 `NVIDIA_API_KEY`，絕不進 repo
+3. **其他 OpenAI 相容雲端 API** — 有 key 才啟用
+4. **規則式引擎** — **保證一定有回應**
 
-部署到 Vercel 時走的是第 3 軌：因為 serverless function **連不到本機 Ollama**
-（`127.0.0.1` 在雲端指的是雲端自己的容器）。
+部署到 Vercel 時：serverless function 連不到本機 Ollama，所以**有 `NVIDIA_API_KEY`
+就走 NVIDIA 雲端 LLM**（逾時 6.5s 內自動降級）；沒有 key 就走規則式引擎。
 
 這不是妥協，而是刻意的設計：**規則式引擎不依賴任何外部服務，
-所以就算其他 AI 服務全部中斷，網站的連結仍然可以正常使用。**
+所以就算雲端 AI 服務全部中斷，網站的連結仍然可以正常使用。**
 
-部署版的回應品質，取決於 `content/` 語料庫的品質。
+另外兩個 AI 應用：
+
+- **改寫模式（rewrite）**：貼上一句對自己/別人說的重話，AI 改寫成說得出口的好話
+- **多輪對話**：最近 4 輪存在瀏覽器 localStorage，送出時帶給模型；後端不儲存
+
+部署版無 key 時的回應品質，取決於 `content/` 語料庫的品質。
+
+### 在 Vercel 後台設定環境變數（上架版啟用雲端 LLM）
+
+Project → Settings → Environment Variables 新增：
+
+| 名稱 | 值 | 說明 |
+|---|---|---|
+| `NVIDIA_API_KEY` | `nvapi-...` | **祕密**，不要提交到 repo |
+| `NVIDIA_MODEL` | （可選）預設 `nvidia/nemotron-3.5-bolt-e4b` | 實測 4/4 PASS、avg 1.2s（見 `qa/_nv_bench.mjs`） |
+| `NVIDIA_TIMEOUT_MS` | （可選）預設 6500 | 逾時後自動降級規則式 |
+
+設好後重新 deploy，`GET /api/health` 會回報 `engines.nvidia.enabled: true`。
 
 ---
 

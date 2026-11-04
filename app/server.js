@@ -127,6 +127,7 @@ const server = http.createServer(async (req, res) => {
       time: new Date().toISOString(),
       engines: {
         ollama: { url: ai.OLLAMA_URL, model: ai.OLLAMA_MODEL, alive: !!alive, timeoutMs: ai.OLLAMA_TIMEOUT_MS },
+        nvidia: { enabled: !!ai.nvidiaKey(), model: ai.NVIDIA_MODEL, url: ai.NVIDIA_URL, timeoutMs: ai.NVIDIA_TIMEOUT_MS },
         cloud: { enabled: !!ai.cloudKey() },
         rules: { enabled: true },
       },
@@ -199,10 +200,12 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 400, { error: '請先寫下一點什麼，一個字也可以。' });
     }
 
-    const force = ['auto', 'rules', 'ollama', 'cloud'].includes(payload.force) ? payload.force : undefined;
+    const force = ai.ENGINE_WHITELIST.includes(payload.force) ? payload.force : undefined;
+    const mode = payload.mode === 'rewrite' ? 'rewrite' : 'chat';
+    const history = Array.isArray(payload.history) ? payload.history : undefined;
 
     try {
-      const result = await ai.generate(text, { force });
+      const result = await ai.generate(text, { force, mode, history });
       return sendJson(res, 200, result);
     } catch (err) {
       // 連規則引擎都掛 → 仍然要回一個能看的畫面（永不白畫面）
@@ -261,6 +264,7 @@ server.listen(PORT, HOST, () => {
   console.log(`  → ${url}`);
   console.log('');
   console.log(`  AI 引擎：${ai.OLLAMA_MODEL} @ ${ai.OLLAMA_URL}（逾時 ${ai.OLLAMA_TIMEOUT_MS / 1000}s）`);
+  console.log(`  NVIDIA NIM：${ai.NVIDIA_MODEL}（${ai.nvidiaKey() ? '已設定 key' : '未設定 key'}，逾時 ${ai.NVIDIA_TIMEOUT_MS / 1000}s）`);
   console.log(`  內容來源：${content.usingFallback ? '內建 fallback（content/ 尚未就緒）' : content.contentDir}`);
   console.log(`  情緒類別：${content.emotions.length} 類`);
   if (content.warnings.length) {

@@ -103,6 +103,13 @@ module.exports = (req, res) => {
         timeoutMs: Number(process.env.OLLAMA_TIMEOUT_MS || 20000),
         note: 'Vercel serverless 無法連到本機 Ollama（BRIEF §10）→ 使用規則式引擎',
       },
+      nvidia: {
+        // ★ 只回「有沒有 key」，絕不回 key 本身
+        enabled: Boolean(process.env.NVIDIA_API_KEY || process.env.NVKEY),
+        model: process.env.NVIDIA_MODEL || 'nvidia/nemotron-3.5-bolt-e4b',
+        timeoutMs: Number(process.env.NVIDIA_TIMEOUT_MS || 6500),
+        note: 'Vercel serverless 走 NVIDIA NIM 雲端 LLM；逾時/無 key 自動降級規則式',
+      },
       cloud: {
         enabled: Boolean(process.env.CLOUD_LLM_API_KEY || process.env.OPENAI_API_KEY),
       },
@@ -126,8 +133,10 @@ module.exports = (req, res) => {
       contentDir: safeRel(contentDir()),
       contentError,
       lib: libDiag,
-      forcedEngine: (process.env.DEPLOY_AI_ENGINE || (process.env.DEPLOY_TRY_OLLAMA === '1' ? 'auto' : 'rules')),
-      note: '部署版走規則式引擎；不依賴任何雲端 LLM，保證永遠有回應',
+      forcedEngine: (process.env.DEPLOY_AI_ENGINE || (process.env.NVIDIA_API_KEY || process.env.NVKEY ? 'nvidia' : (process.env.DEPLOY_TRY_OLLAMA === '1' ? 'auto' : 'rules'))),
+      note: (process.env.NVIDIA_API_KEY || process.env.NVKEY)
+        ? '部署版走 NVIDIA NIM 雲端 LLM；逾時或失敗自動降級規則式，保證永遠有回應'
+        : '部署版走規則式引擎；不依賴任何雲端 LLM，保證永遠有回應。設 NVIDIA_API_KEY 後自動升級為雲端 LLM',
     },
   };
 

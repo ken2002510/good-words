@@ -12,11 +12,11 @@
 ## 1. 規格（ffprobe 實際輸出）
 
 ```
-duration = 171.800s   (<= 180s 硬上限：PASS，餘 8.2s)
-size     = 25.40 MB   (24.2 MiB)
+2026-11-04 重組版（僅重錄第 18 段旁白 + tech 字卡，demo 錄影未動，重新全關卡驗證）：
+duration = 175.900s   (<= 180s 硬上限：PASS，餘 4.1s)
+size     = 24.60 MB
 video    = h264  1080x1920  30/1  yuv420p
 audio    = aac   44100Hz    2ch
-bitrate  = 1182 kbps
 ```
 
 解碼檢查：`ffmpeg -v error -i out.mp4 -f null -` → **無任何錯誤輸出**
@@ -40,9 +40,9 @@ bitrate  = 1182 kbps
   steps >2.0 : 25.7%     ← 門檻 >=15%  → PASS
   steps >0.5 : 30.6%
 
-Demo 段（42.9–141.7s，真實操作最密集處）：
-  steps >2.0 : 42.9%     ← 遠高於門檻
-  steps >0.5 : 51.5%
+Demo 段（43.4–143.3s，真實操作最密集處；2026-11-04 重組版重驗）：
+  每 10s 視窗 mean 差異 1.0–11.4（max達 199.6），無一窗凍結；
+  qa_check.py 4_motion：183 對相鄰幀平均差異 10.06，近乎靜止比例 0% → PASS
 ```
 
 **已知殘留靜止段（不構成缺陷）**

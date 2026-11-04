@@ -34,6 +34,11 @@
     <p class="intro-sub">寫錯字沒關係、講不清楚也沒關係。<strong>不會被評價，也不會被記錄。</strong></p>
 
     <form id="form" autocomplete="off">
+      <div class="mode-switch" role="group" aria-label="選擇模式">
+        <button type="button" class="mode-btn is-on" data-mode="chat" aria-pressed="true">傾訴心事</button>
+        <button type="button" class="mode-btn" data-mode="rewrite" aria-pressed="false">改寫一句重話</button>
+      </div>
+
       <label class="sr-only" for="input">你的心事</label>
       <textarea id="input" name="text" rows="5" maxlength="2000"
         placeholder="例如：今天開會我講錯話，回家路上一直想，覺得自己很沒用。"
@@ -41,15 +46,18 @@
 
       <div class="row-between">
         <span id="input-hint" class="hint">不用寫完整，一句話也可以</span>
-        <span id="counter" class="hint counter">0 / 2000</span>
+        <span class="hint-row">
+          <button type="button" id="btn-clear-history" class="link-btn" hidden>清除對話紀錄</button>
+          <span id="counter" class="hint counter">0 / 2000</span>
+        </span>
       </div>
 
       <div class="chips" role="group" aria-label="不知道怎麼開始？試試這些">
         <span class="chips-label">不知道怎麼開始：</span>
-        <button class="chip" type="button" data-fill="最近工作上一直出錯，我覺得自己很沒用。">工作</button>
-        <button class="chip" type="button" data-fill="他已經三天沒回我訊息了，我一直想是不是我做錯了什麼。">感情</button>
-        <button class="chip" type="button" data-fill="每次回家都要被問什麼時候結婚，我真的很累。">家庭</button>
-        <button class="chip" type="button" data-fill="身邊很多人，可是沒有一個人真的懂我。">孤單</button>
+        <button class="chip" type="button" data-fill-chat="最近工作上一直出錯，我覺得自己很沒用。" data-fill-rewrite="我怎麼這麼沒用，什麼事都做不好。">工作</button>
+        <button class="chip" type="button" data-fill-chat="他已經三天沒回我訊息了，我一直想是不是我做錯了什麼。" data-fill-rewrite="你根本什麼都不懂，少來煩我。">感情</button>
+        <button class="chip" type="button" data-fill-chat="每次回家都要被問什麼時候結婚，我真的很累。" data-fill-rewrite="每次都是我搞砸，我真的很煩自己。">家庭</button>
+        <button class="chip" type="button" data-fill-chat="身邊很多人，可是沒有一個人真的懂我。" data-fill-rewrite="跟你說也沒用，你不會懂的。">孤單</button>
       </div>
 
       <button id="btn-submit" class="primary" type="submit">
@@ -58,7 +66,7 @@
       </button>
 
       <p class="privacy">
-        🔒 免登入 · 不儲存對話 · 心事不會離開你的裝置<sup>*</sup>
+        🔒 免登入 · 對話紀錄只存在你的瀏覽器 · 送出的內容僅用於這次回應<sup>*</sup>
       </p>
     </form>
   </section>
@@ -154,8 +162,9 @@
     <p><strong>好好說話</strong> 是一個陪伴工具，不是醫療或諮商服務，也不做任何診斷。</p>
     <p>如果你有立即的危險，請撥 <a href="tel:119">119</a> 或 <a href="tel:110">110</a>；想找人說話，撥 <a href="tel:1925">1925</a>（24 小時免付費）。</p>
     <p class="foot-fine">
-      * 本機版本：心事送到你自己電腦上的 AI 模型處理，不會上傳到雲端。
-      若站方部署為雲端版本，會改用不保存內容的推論服務。
+      * 本機版本：心事只送到你自己電腦上的 AI 模型處理，完全不上傳。
+      線上版本：你送出的文字會送到雲端 AI 推論服務，僅用於產生這一次回應，
+      不會被保存、不會用於訓練；對話紀錄只留在你的瀏覽器裡，不會上傳。
     </p>
   </footer>
 

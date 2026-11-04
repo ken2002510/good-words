@@ -19,8 +19,8 @@
  *
  * 逾時預算：
  *   Vercel Hobby 的 serverless function 上限是 10 秒（已寫在 vercel.json 的 maxDuration）。
- *   我們把預算壓在 8 秒內，且**預設強制走規則軌**（毫秒級），
- *   避免任何 Ollama/雲端探測吃掉時間導致 504。
+ *   我們把預算壓在 8 秒內；**有 NVIDIA_API_KEY 時預設走 NVIDIA 軌**（逾時 6.5s 內），
+ *   無 key 時走規則軌（毫秒級）。不論哪一軌，總預算內都會 race 回規則式，避免 504。
  */
 
 const { loadLib } = require('../lib/resolve.js');
@@ -29,16 +29,20 @@ const MAX_TEXT = 4000;
 const FUNCTION_BUDGET_MS = 8000; // 留 2 秒給 Vercel 收尾，避免 504
 
 /**
- * 部署環境是否要嘗試 Ollama？
- * 預設「不要」——雲端打 127.0.0.1:11434 只是浪費 1.5 秒然後失敗。
- * 若使用者真的在 Vercel 上設了自架的 OLLAMA_URL（例如 tunnel），
- * 才把 DEPLOY_TRY_OLLAMA=1 打開。
+ * 部署環境要走哪一軌？
+ * 邏輯（優先順序）：
+ *   1. DEPLOY_AI_ENGINE 明確指定 → 照走（auto|rules|ollama|nvidia|cloud）
+ *   2. 有 NVIDIA_API_KEY（或 NVKEY）→ 'nvidia'（上架版 AI 主力；逾時自動降級規則式）
+ *   3. DEPLOY_TRY_OLLAMA=1 → 'auto'（自架 Ollama tunnel 時用）
+ *   4. 否則 → 'rules'（無任何外部依賴，絕對不會逾時）
+ * 不論哪一軌，function 總預算內都會 Promise.race 到規則式，永不白畫面。
  */
 function deployForce() {
   const explicit = (process.env.DEPLOY_AI_ENGINE || '').toLowerCase();
-  if (['auto', 'rules', 'ollama', 'cloud'].includes(explicit)) return explicit;
+  if (['auto', 'rules', 'ollama', 'nvidia', 'cloud'].includes(explicit)) return explicit;
+  if (process.env.NVIDIA_API_KEY || process.env.NVKEY) return 'nvidia';
   if (process.env.DEPLOY_TRY_OLLAMA === '1') return 'auto';
-  return 'rules'; // ← 部署預設：規則式，絕對不會逾時
+  return 'rules'; // ← 無 key 時的預設：規則式，絕對不會逾時
 }
 
 /** 讀 body（Vercel 通常已 parse；保險起見自己處理字串/串流） */
@@ -117,9 +121,13 @@ module.exports = async (req, res) => {
   if (!text) return res.status(400).json({ error: '請先寫下一點什麼，一個字也可以。' });
 
   // 只允許白名單，避免有人用 force 強制走慢軌把 function 拖到逾時
-  const force = ['auto', 'rules', 'ollama', 'cloud'].includes(payload && payload.force)
+  const force = ['auto', 'rules', 'ollama', 'nvidia', 'cloud'].includes(payload && payload.force)
     ? payload.force
     : undefined;
+
+  // 模式：chat（預設）| rewrite（毒話改寫）；歷史由前端帶來，後端消毒後原樣轉發給模型軌
+  const mode = payload && payload.mode === 'rewrite' ? 'rewrite' : 'chat';
+  const history = Array.isArray(payload && payload.history) ? payload.history : undefined;
 
   // ════════════════════════════════════════════════════════════
   // 主路徑
@@ -128,7 +136,7 @@ module.exports = async (req, res) => {
     try {
       const budget = FUNCTION_BUDGET_MS - (Date.now() - t0);
       const result = await Promise.race([
-        ai.generate(text, { force: force || deployForce() }),
+        ai.generate(text, { force: force || deployForce(), mode, history }),
         new Promise((_, rej) =>
           setTimeout(() => rej(Object.assign(new Error('timeout'), { code: 'TIMEOUT' })), Math.max(500, budget)),
         ),
@@ -137,7 +145,7 @@ module.exports = async (req, res) => {
       out.meta.deploy = {
         engine: out.meta.engine,
         forced: force || deployForce(),
-        note: 'Vercel serverless：預設規則軌（連不到本機 Ollama）',
+        note: 'Vercel serverless：有 NVIDIA key 走雲端 LLM 軌，否則走規則式；逾時一律降級規則式',
       };
       return res.status(200).json(out);
     } catch (err) {
@@ -146,7 +154,7 @@ module.exports = async (req, res) => {
       if (isTimeout) {
         // 逾時 → 直接改用規則軌（規則軌是同步的、毫秒級，一定回得來）
         try {
-          const r = shape(ai.generate(text, { force: 'rules' }));
+          const r = shape(ai.generate(text, { force: 'rules', mode }));
           r.meta.degradedReason = '部署環境逾時，改用規則式回應';
           return res.status(200).json(r);
         } catch (_) {
@@ -191,6 +199,7 @@ module.exports = async (req, res) => {
     meta: {
       engine: 'rules',
       model: null,
+      mode: payload && payload.mode === 'rewrite' ? 'rewrite' : 'chat',
       degraded: true,
       degradedReason: loadError ? `引擎載入失敗（${loadError}），使用安全備援句` : '使用安全備援句',
     },

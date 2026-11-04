@@ -225,11 +225,98 @@ function classifyEmotion(text) {
 // 主回應
 // ─────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────
+// 改寫模式（mode=rewrite）的規則式 fallback
+//   LLM 不可用時，「重話 → 好話」仍要能運作。
+//   策略：① 命中常見毒話 pattern → 給人工寫好的改寫
+//         ② 都沒中 → 把絕對化字眼（永遠/總是/絕對…）軟化，再包成三段
+// ─────────────────────────────────────────────────────────────
+
+const REWRITE_PATTERNS = [
+  {
+    re: /沒用|廢物|很爛|一無是處|白痴|垃圾/,
+    accept: '你現在對自己很失望，那個失望是真的。',
+    goodword: '但「沒用」這兩個字太重了——你只是今天這件事沒做好，那不等於你是誰。',
+    smallstep: '今晚試著對自己說一句：「今天的我確實需要休息。」',
+  },
+  {
+    re: /去死|早死|死一死/,
+    accept: '你現在氣到極點，那股火是真的。',
+    goodword: '生氣沒有錯，但把火燒向自己或別人，只會讓明天更痛。',
+    smallstep: '先深呼吸三次，等火小一點，再決定要說什麼。',
+  },
+  {
+    re: /很煩|很賤|討厭|白目|智障|有病/,
+    accept: '這個人或這件事真的讓你很不舒服。',
+    goodword: '不舒服的感覺可以說，但罵人的話一旦出口，傷口就回不去了。',
+    smallstep: '把想罵的話寫下來，改成「我覺得…所以我有點…」。',
+  },
+  {
+    re: /為什麼(每次|總是|都).*我|都是我/,
+    accept: '你覺得好像什麼事都壓在你身上，那種委屈是真的。',
+    goodword: '但「都是我」太絕对了——有些事不是你一個人造成的。',
+    smallstep: '今晚列出三件「不是只有你在扛」的事。',
+  },
+];
+
+/** 軟化絕對化字眼的簡單改寫（規則式，當通用 fallback） */
+function simpleRewrite(text) {
+  let t = String(text || '');
+  t = t.replace(/(永遠|總是|從來|絕對|每次都|都)/g, (m) => (m === '每次都' || m === '都' ? '有時候' : '有時候'));
+  t = t.replace(/^我就是/, '我現在覺得好像');
+  t = t.replace(/我覺得(我)?/, '我現在覺得');
+  return t;
+}
+
+function respondRewrite(text, { seed } = {}) {
+  const t0 = Date.now();
+  const t = String(text || '');
+  const s = seed === undefined ? hashSeed(t) : seed;
+
+  for (const p of REWRITE_PATTERNS) {
+    if (p.re.test(t)) {
+      const parts = { 承接: p.accept, 好話: p.goodword, 小步: p.smallstep };
+      if (lint(parts).ok) {
+        return {
+          crisis: false,
+          emotion: { id: '_rewrite', name: '想改口的話', intensity: 3, situation: '你想把一句重話，說得不傷人。' },
+          accept: parts.承接,
+          goodword: parts.好話,
+          smallstep: parts.小步,
+          resources: null,
+          meta: { engine: 'rules', model: null, degraded: true, mode: 'rewrite', elapsedMs: Date.now() - t0, contentSource: 'builtin-rewrite' },
+        };
+      }
+    }
+  }
+
+  // 通用：軟化後包三段
+  const soft = simpleRewrite(t).slice(0, 60);
+  const parts = {
+    承接: '這句話背後的感受是真的，只是說出來的方式太重了。',
+    好話: soft ? `可以試試這樣說：「${soft}。」` : '同一個意思，換個不刺人的說法，對方才聽得進去。',
+    小步: '今晚把這句話寫下來，明天換一個時間、用平靜的語氣說。',
+  };
+  void s;
+  return {
+    crisis: false,
+    emotion: { id: '_rewrite', name: '想改口的話', intensity: 3, situation: '你想把一句重話，說得不傷人。' },
+    accept: parts.承接,
+    goodword: parts.好話,
+    smallstep: parts.小步,
+    resources: null,
+    meta: { engine: 'rules', model: null, degraded: true, mode: 'rewrite', elapsedMs: Date.now() - t0, contentSource: 'builtin-rewrite-generic' },
+  };
+}
+
 /**
- * 規則式主回應（第三軌）
+ * 規則式主回應（最後一軌）
+ * @param {string} text
+ * @param {{seed?: number, mode?: 'chat'|'rewrite'}} opts
  * @returns 三段結構 + meta
  */
-function respond(text, { seed } = {}) {
+function respond(text, { seed, mode } = {}) {
+  if (mode === 'rewrite') return respondRewrite(text, { seed });
   const t0 = Date.now();
   const content = getContent();
   const emotion = classifyEmotion(text);
@@ -271,6 +358,7 @@ function respond(text, { seed } = {}) {
     meta: {
       engine: 'rules',
       model: null,
+      mode: 'chat',
       degraded: true,
       degradedReason: '本機模型未啟用，使用規則式回應',
       elapsedMs: Date.now() - t0,
@@ -338,6 +426,7 @@ function toCopyText(result) {
 
 module.exports = {
   respond,
+  respondRewrite,
   classifyEmotion,
   buildShare,
   toCopyText,

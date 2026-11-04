@@ -72,21 +72,21 @@ curl.exe -s "https://good-words.vercel.app/?cb=$(Get-Date -UFormat %s)" -o out.h
 |---|---|---|
 | 原始碼 | GitHub public repo | 免費、永久、可作為「製作過程」的證據 |
 | 網站 | **Vercel Hobby** | 免費、永久、自動 HTTPS、附 `*.vercel.app` 網域 |
-| AI | **規則式引擎**（`app/lib/rules.js`） | **保證永遠有回應**，不依賴任何外部服務 |
-| 雲端 LLM | 可選，**預設關閉** | 實測 `NVIDIA_API_KEY` 逾時、HF 推論 402 → 不可依賴（BRIEF §4） |
+| AI | **有 `NVIDIA_API_KEY` 走 NVIDIA NIM 雲端 LLM，否則規則式引擎** | 雲端 LLM為主力；規則式保證永遠有回應 |
+| 降級 | 逾時 6.5s 內自動回規則式 | 評審期間即使 key 失效，連結仍完整可用 |
 
 ### ★ 最重要的一件事
 
 **Vercel 的 serverless function 連不到你筆電的 Ollama。**
 
 `127.0.0.1:11434` 在 Vercel 上指的是「Vercel 自己那台容器」，不是你家的 RTX 5060。
-所以部署版**必須**走規則式引擎。
+所以部署版走 **NVIDIA NIM 雲端 LLM**（有 key 時），逾時自動降級**規則式引擎**。
 
-這不是妥協，而是 BRIEF §10 已經定案的架構：
+這不是妥協，而是 BRIEF §10 定案的可插拔架構：
 
-> 「AI 層必須是可插拔的 —— 本機開發走 Ollama，Vercel 部署走規則式引擎（保證永遠有回應）」
+> 「AI 層必須是可插拔的 —— 本機開發走 Ollama，Vercel 部署走雲端 LLM（有 key）／規則式引擎（保證永遠有回應）」
 
-也因此，**部署版的品質 100% 取決於 `content/` 的好話語料庫有多好**。
+沒有 key 時，**部署版的品質 100% 取決於 `content/` 的好話語料庫有多好**。
 語料庫越好，公開站越好。這是規則軌的價值所在。
 
 ---
@@ -372,22 +372,24 @@ Vercel Hobby 是免費方案，有兩個要留意的點：
 
 ---
 
-## 9. 選用：升級 AI 品質（非必要）
+## 9. ★ 啟用上架版雲端 LLM（NVIDIA NIM）——2026-11-04 起為預設行為
 
-規則式已經是可靠的預設。**只有在拿到穩定可用的雲端 key 時**才考慮：
-
-Vercel 專案 → Settings → Environment Variables 新增：
+Vercel 專案 → Settings → Environment Variables 新增（**祕密，絕不進 repo**）：
 
 | 名稱 | 值 | 說明 |
 |---|---|---|
-| `CLOUD_LLM_API_KEY` | `sk-...` | OpenAI 相容端點的金鑰 |
-| `CLOUD_LLM_MODEL` | `gpt-4o-mini` | 模型名 |
-| `CLOUD_LLM_URL` | （選填） | 預設 `https://api.openai.com/v1/chat/completions` |
-| `DEPLOY_AI_ENGINE` | `auto` | 改為 auto 才會嘗試雲端；**預設是 rules** |
+| `NVIDIA_API_KEY` | `nvapi-...` | NVIDIA NIM 金鑰（integrate.api.nvidia.com） |
+| `NVIDIA_MODEL` | （選填） | 預設見 `app/lib/ai.js` 的 `NVIDIA_MODEL`（實測選定） |
+| `NVIDIA_TIMEOUT_MS` | （選填）預設 6500 | 逾時後自動降級規則式 |
+| `CLOUD_LLM_API_KEY` 等 | （選填） | 其他 OpenAI 相容雲端，做第三軌 |
 
-> ⚠️ **BRIEF §4 已實測：`NVIDIA_API_KEY` 逾時、HF 推論 402。**
-> 不要因為「有 key」就切換 —— 必須先實測該 key 真的能通。
-> 若雲端失敗，`ai.js` 會自動降級回規則軌，**不會白畫面**，所以風險有限。
+設好後 redeploy：`GET /api/health` 會回 `engines.nvidia.enabled=true`，
+`POST /api/respond` 會回 `meta.engine=nvidia`。
+**沒設 key 或 key 失效時，自動走規則式引擎，不會白畫面** ——
+這是評審期間「連結必須維持正常可使用」的保險。
+
+模型選擇實測：`qa/_nv_bench.mjs`（key 只放環境變數，腳本不印 key）。
+HF 推論額度已 402，不可依賴。
 
 ---
 
