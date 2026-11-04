@@ -82,7 +82,7 @@ module.exports = (req, res) => {
 
   // ── 額外的部署診斷（不影響上面的契約欄位；只回相對路徑）──
   const libDiag = {};
-  for (const name of ['rules', 'safety', 'ai', 'data']) {
+  for (const name of ['rules', 'safety', 'ai', 'data', 'screen', 'kv']) {
     libDiag[name] = safe(() => {
       const r = loadLib(name);
       return { source: safeRel(r.source), snapshot: r.snapshot, exports: Object.keys(r.mod || {}) };
@@ -114,6 +114,15 @@ module.exports = (req, res) => {
         enabled: Boolean(process.env.CLOUD_LLM_API_KEY || process.env.OPENAI_API_KEY),
       },
       rules: { enabled: true },
+      wall: safe(() => {
+        const kv = loadLib('kv').mod;
+        return {
+          enabled: kv.enabled(),
+          note: kv.enabled()
+            ? '好話牆（匿名公開牆 + 本週排行榜）已啟用，資料存於 Vercel KV'
+            : '好話牆未啟用（尚未連結 Vercel KV）→ 前端降級為本機紀錄，網站照常運作',
+        };
+      }, { enabled: false, note: '無法診斷' }),
     },
     content: {
       // 只回相對路徑，不洩漏絕對路徑（見上方 safeRel 的說明）

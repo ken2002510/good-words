@@ -65,6 +65,9 @@ node app/server.js
 
 - **改寫模式（rewrite）**：貼上一句對自己/別人說的重話，AI 改寫成說得出口的好話
 - **多輪對話**：最近 4 輪存在瀏覽器 localStorage，送出時帶給模型；後端不儲存
+- **好話牆（匿名公開）**：把事件掛上牆，AI 先回應，他人鼓勵須經 AI 審核（反毒雞湯 lint）才顯示；危機/個資/謾罵內容永不公開
+- **計分與稱號**：越具體越多分（篇幅/時間細節/引用原話/因果/情緒詞）；鼓勵雙方得分；每週一重計，公開排行榜前 10 名授予稱號（好話燈塔/溫暖推手/善意達人/好話夥伴）；**所有個人紀錄只存在瀏覽器**
+- 牆與排行榜資料存 Vercel KV（匿名，只顯示「牆友#XXXX」）；未連 KV 時自動降級為本機牆
 
 部署版無 key 時的回應品質，取決於 `content/` 語料庫的品質。
 
@@ -75,7 +78,8 @@ Project → Settings → Environment Variables 新增：
 | 名稱 | 值 | 說明 |
 |---|---|---|
 | `NVIDIA_API_KEY` | `nvapi-...` | **祕密**，不要提交到 repo |
-| `NVIDIA_MODEL` | （可選）預設 `nvidia/nemotron-3.5-bolt-e4b` | 實測 4/4 PASS、avg 1.2s（見 `qa/_nv_bench.mjs`） |
+| `NVIDIA_MODEL` | （可選）預設 `nvidia/nemotron-3.5-bolt-e4b` | 實測 10/10 PASS、avg 2.4s（見 `qa/_nv_bench.mjs`） |
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | **Vercel 連結 KV 後自動注入，不用手動填** | 啟用好話牆（匿名公開牆 + 每週排行榜）；沒連就降級本機牆 |
 | `NVIDIA_TIMEOUT_MS` | （可選）預設 6500 | 逾時後自動降級規則式 |
 
 設好後重新 deploy，`GET /api/health` 會回報 `engines.nvidia.enabled: true`。

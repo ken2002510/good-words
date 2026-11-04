@@ -393,6 +393,25 @@ HF 推論額度已 402，不可依賴。
 
 ---
 
+## 9b. ★ 啟用好話牆（匿名公開牆 + 每週排行榜）——2026-11-05 新增
+
+1. Vercel 後台 → **Storage → Create Database → KV**（免費方案）
+2. 建好後選 **Connect Project** 連到本專案 —— Vercel 會**自動注入**
+   `KV_REST_API_URL`、`KV_REST_API_TOKEN`（不需要把任何東西貼進 repo）
+3. Redeploy（或等 push 自動建）後驗收：
+   - `GET /api/health` → `engines.wall.enabled: true`
+   - `GET /api/wall` → `wallEnabled: true`
+   - `POST /api/wall`、`POST /api/encourage`、`GET /api/leaderboard` 正常回應
+
+**沒連 KV 也沒關係**：牆會自動降級成「只看自己瀏覽器的本機牆」，分數照算，
+網站所有功能照常（永不白畫面原則同樣適用於牆）。
+
+安全設計（見 `app/lib/screen.js` + `deploy/lib/wallcore.js`）：
+危機內容永不寫入 KV；個資/謾罵 422 拒絕；鼓勵話必過 lint；
+每人每週 ≤5 篇、每日 ≤20 句鼓勵；牆只留最近 60 篇。
+
+---
+
 ## 10. 交付清單
 
 ```

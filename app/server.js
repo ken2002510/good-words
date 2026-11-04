@@ -22,6 +22,27 @@ const ai = require('./lib/ai');
 const safety = require('./lib/safety');
 const { getContent } = require('./lib/data');
 
+// 好話牆三支 handler與部署版共用同一份邏輯（deploy/lib/wallcore.js）
+const wallHandler = require('../deploy/api/wall.js');
+const encourageHandler = require('../deploy/api/encourage.js');
+const leaderboardHandler = require('../deploy/api/leaderboard.js');
+
+/** 把 Node 原生 res 包成 Vercel 風格（setHeader/status().json()），讓 deploy handler 直接重用 */
+function vercelRes(res) {
+  return {
+    _code: 200,
+    setHeader(k, v) { res.setHeader(k, v); return this; },
+    status(c) { this._code = c; return this; },
+    json(obj) {
+      const body = Buffer.from(JSON.stringify(obj), 'utf8');
+      res.writeHead(this._code, { 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': body.length });
+      res.end(body);
+      return this;
+    },
+    end(s) { res.writeHead(this._code); res.end(s || ''); return this; },
+  };
+}
+
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -130,6 +151,7 @@ const server = http.createServer(async (req, res) => {
         nvidia: { enabled: !!ai.nvidiaKey(), model: ai.NVIDIA_MODEL, url: ai.NVIDIA_URL, timeoutMs: ai.NVIDIA_TIMEOUT_MS },
         cloud: { enabled: !!ai.cloudKey() },
         rules: { enabled: true },
+        wall: { enabled: require('./lib/kv').enabled() },
       },
       content: {
         dir: content.contentDir,
@@ -240,6 +262,17 @@ const server = http.createServer(async (req, res) => {
     };
     const share = ai.buildShare(base, audience, toneId);
     return sendJson(res, 200, { ...share, copyText: ai.toCopyText(base) });
+  }
+
+  // ── 好話牆（匿名公開牆 + 鼓勵 + 排行榜；KV 未設時降級本機）──
+  if (p === '/api/wall' && (req.method === 'GET' || req.method === 'POST')) {
+    return wallHandler(req, vercelRes(res));
+  }
+  if (p === '/api/encourage' && req.method === 'POST') {
+    return encourageHandler(req, vercelRes(res));
+  }
+  if (p === '/api/leaderboard' && req.method === 'GET') {
+    return leaderboardHandler(req, vercelRes(res));
   }
 
   // 已知的 API 路徑用錯誤的方法呼叫 → 405（不要掉到靜態檔變成 404）

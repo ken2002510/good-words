@@ -5,9 +5,15 @@
     "api/respond.js": { "maxDuration": 10, "memory": 512 },
     "api/share.js": { "maxDuration": 10, "memory": 256 },
     "api/health.js": { "maxDuration": 10, "memory": 256 },
+    "api/wall.js": { "maxDuration": 10, "memory": 512 },
+    "api/encourage.js": { "maxDuration": 10, "memory": 256 },
+    "api/leaderboard.js": { "maxDuration": 10, "memory": 256 },
     "app/api/respond.js": { "maxDuration": 10, "memory": 512 },
     "app/api/share.js": { "maxDuration": 10, "memory": 256 },
-    "app/api/health.js": { "maxDuration": 10, "memory": 256 }
+    "app/api/health.js": { "maxDuration": 10, "memory": 256 },
+    "app/api/wall.js": { "maxDuration": 10, "memory": 512 },
+    "app/api/encourage.js": { "maxDuration": 10, "memory": 256 },
+    "app/api/leaderboard.js": { "maxDuration": 10, "memory": 256 }
   },
   "rewrites": [
     { "source": "/", "destination": "/app/public/index.html" },

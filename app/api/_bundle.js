@@ -31,6 +31,8 @@ const LIB_SOURCES = {
   data: '../lib/data.js',
   rules: '../lib/rules.js',
   safety: '../lib/safety.js',
+  screen: '../lib/screen.js',
+  kv: '../lib/kv.js',
 };
 
 /** 內嵌語料（字面路徑；位於 app/lib 內，一定在部署範圍） */

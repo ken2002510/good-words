@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="description" content="把說不出口的心事寫下來，先被接住，再拿到一句具體、真誠、可以說出口的好話。免登入、不儲存、不上傳。">
+<meta name="description" content="把說不出口的心事寫下來，先被接住，再拿到一句具體、真誠、可以說出口的好話。免登入；對話不儲存、不上傳（你主動匿名掛上好話牆的內容除外）。">
 <!-- 匿名性：無作者、無單位、無 logo、無追蹤碼（BRIEF §8） -->
 <meta name="robots" content="noindex">
 <title>好好說話 — 先接住你，再給你一句好話</title>
@@ -31,7 +31,7 @@
   <!-- ① 輸入區 -->
   <section class="card intro" id="write">
     <h2 class="intro-title">把心裡的話寫下來，不用修飾。</h2>
-    <p class="intro-sub">寫錯字沒關係、講不清楚也沒關係。<strong>不會被評價，也不會被記錄。</strong></p>
+    <p class="intro-sub">寫錯字沒關係、講不清楚也沒關係。<strong>不會被評價；對話只留在你的瀏覽器，不會被伺服器記錄。</strong></p>
 
     <form id="form" autocomplete="off">
       <div class="mode-switch" role="group" aria-label="選擇模式">
@@ -124,6 +124,9 @@
         <button class="act act-primary" type="button" data-act="share">
           <span aria-hidden="true">↗</span> 轉送給別人
         </button>
+        <button class="act" type="button" data-act="publish" id="btn-publish">
+          <span aria-hidden="true">📌</span> 匿名掛上好話牆
+        </button>
       </div>
 
       <p id="engine-note" class="engine-note"></p>
@@ -157,6 +160,40 @@
     <p id="fav-empty" class="hint">還沒有收藏。按好話卡片上的「♡ 收藏」就會收在這裡。</p>
   </section>
 
+  <!-- ⑤ 我的好話紀錄（只存在這個瀏覽器） -->
+  <section id="me-panel" class="card me-panel" aria-label="我的好話紀錄">
+    <div class="row-between">
+      <h2 class="fav-title">我的好話紀錄</h2>
+      <span id="me-handle" class="hint"></span>
+    </div>
+    <div class="me-stats">
+      <div class="me-stat"><span class="me-num" id="me-pts">0</span><span class="me-label">總分</span></div>
+      <div class="me-stat"><span class="me-num" id="me-week-pts">0</span><span class="me-label" id="me-week-label">本週分數</span></div>
+      <div class="me-stat"><span class="me-num me-title" id="me-title">初來報到</span><span class="me-label">本週稱號</span></div>
+      <div class="me-stat"><span class="me-num" id="me-rank" style="font-size:15px;padding-top:4px">—</span><span class="me-label">本週排名</span></div>
+    </div>
+    <ul id="me-history" class="fav-list me-history"></ul>
+    <p id="me-empty" class="hint">還沒有紀錄。把事情匿名掛上好話牆、或鼓勵別人，就會開始累積分數。</p>
+    <p class="hint">分數與紀錄只存在這個瀏覽器（localStorage），不綁帳號、不會上傳。</p>
+  </section>
+
+  <!-- ⑥ 好話牆（匿名公開） -->
+  <section id="wall-section" class="card wall-section" aria-label="好話牆">
+    <h2 class="fav-title">好話牆 · 匿名分享</h2>
+    <p class="hint">把你遇到的事匿名掛上來：AI 會先回應一輪，然後別人可以留下一句<strong>經 AI 審核</strong>的鼓勵話。內容不含帳號與個資；有危機訊號的內容永遠不會被公開。</p>
+    <p id="wall-status" class="hint"></p>
+    <ul id="wall-list" class="wall-list"></ul>
+    <p id="wall-empty" class="hint">牆上還沒有東西。在上面寫下你的事，拿到回應後按「📌 匿名掛上好話牆」。</p>
+  </section>
+
+  <!-- ⑦ 本週排行榜（公開） -->
+  <section id="board" class="card board" aria-label="本週排行榜">
+    <h2 class="fav-title">本週好話排行榜</h2>
+    <p class="hint" id="board-week"></p>
+    <ol id="board-list" class="board-list"></ol>
+    <p id="board-empty" class="hint">本週還沒有人得分。</p>
+  </section>
+
   <!-- 頁尾：免責 + 匿名（無任何個資） -->
   <footer class="foot">
     <p><strong>好好說話</strong> 是一個陪伴工具，不是醫療或諮商服務，也不做任何診斷。</p>
@@ -165,6 +202,8 @@
       * 本機版本：心事只送到你自己電腦上的 AI 模型處理，完全不上傳。
       線上版本：你送出的文字會送到雲端 AI 推論服務，僅用於產生這一次回應，
       不會被保存、不會用於訓練；對話紀錄只留在你的瀏覽器裡，不會上傳。
+      你主動按「匿名掛上好話牆」的內容才會匿名公開（無帳號、經 AI 審核、
+      不含個資與危機內容）；分數與稱號只記錄在你的瀏覽器。
     </p>
   </footer>
 

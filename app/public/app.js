@@ -38,15 +38,34 @@
     btnFav: $('btn-favorites'),
     toast: $('toast'),
     btnClearHistory: $('btn-clear-history'),
+    meHandle: $('me-handle'),
+    mePts: $('me-pts'),
+    meWeekPts: $('me-week-pts'),
+    meWeekLabel: $('me-week-label'),
+    meTitle: $('me-title'),
+    meRank: $('me-rank'),
+    meHistory: $('me-history'),
+    meEmpty: $('me-empty'),
+    wallStatus: $('wall-status'),
+    wallList: $('wall-list'),
+    wallEmpty: $('wall-empty'),
+    boardWeek: $('board-week'),
+    boardList: $('board-list'),
+    boardEmpty: $('board-empty'),
   };
 
   var MAXLEN = 2000;
   var FAV_KEY = 'hsh.favorites.v1';
   var HIST_KEY = 'hsh.history.v1';
+  var ANON_KEY = 'hsh.anon.v1';
+  var PROFILE_KEY = 'hsh.profile.v1';
+  var WALLMINE_KEY = 'hsh.wallmine.v1';
   var current = null;      // 目前顯示的回應
   var audience = 'friend'; // 轉送對象
   var busy = false;
   var mode = 'chat';       // 'chat' 傾訴 | 'rewrite' 改寫重話
+  var lastText = '';       // 最近一次送出的原文（掛牆用）
+  var published = false;   // 目前這張卡是否已掛牆
 
   // ── 對話歷史（只存在本機 localStorage，送出時帶給後端，後端不儲存）──
 
@@ -322,6 +341,10 @@
     el.body.hidden = false;
     el.loading.hidden = true;
 
+    published = false;
+    var pb = $('btn-publish');
+    if (pb) pb.disabled = false;
+
     refreshFavButton();
     setTab('friend');
 
@@ -352,6 +375,8 @@
       return;
     }
     if (busy) return;
+    lastText = text;
+    published = false;
 
     setBusy(true);
     el.crisis.hidden = true;
@@ -553,6 +578,8 @@
 
     if (act === 'close-share') el.sharePanel.hidden = true;
 
+    if (act === 'publish') publish();
+
     if (act === 'clear-fav') {
       if (!loadFavs().length) { toast('本來就是空的'); return; }
       if (confirm('清空所有收藏？')) {
@@ -588,11 +615,288 @@
     }
   });
 
+  // ── 好話牆 / 分數 / 排行榜（個人紀錄只存在本機 localStorage）─────
+
+  function getAnon() {
+    try {
+      var a = localStorage.getItem(ANON_KEY);
+      if (a && /^[A-Za-z0-9_-]{8,64}$/.test(a)) return a;
+      a = (window.crypto && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : 'anon-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem(ANON_KEY, a);
+      return a;
+    } catch (e) { return 'anon-local'; }
+  }
+
+  function weekKeyNow() {
+    try {
+      var d = new Date();
+      var tw = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
+      var date = new Date(Date.UTC(tw.getFullYear(), tw.getMonth(), tw.getDate()));
+      var dayNum = (date.getUTCDay() + 6) % 7;
+      date.setUTCDate(date.getUTCDate() - dayNum + 3);
+      var ft = new Date(Date.UTC(date.getUTCFullYear(), 0, 4));
+      var fd = (ft.getUTCDay() + 6) % 7;
+      ft.setUTCDate(ft.getUTCDate() - fd + 3);
+      var w = 1 + Math.round((date - ft) / (7 * 86400000));
+      return tw.getFullYear() + '-W' + ('0' + w).slice(-2);
+    } catch (e) { return '----'; }
+  }
+
+  function loadProfile() {
+    try {
+      var p = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null');
+      if (p && typeof p === 'object') {
+        p.history = Array.isArray(p.history) ? p.history : [];
+        return p;
+      }
+    } catch (e) { /* ignore */ }
+    return { week: weekKeyNow(), weekPts: 0, allPts: 0, history: [] };
+  }
+
+  function saveProfile(p) {
+    try { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch (e) { /* ignore */ }
+  }
+
+  function addProfileEvent(type, delta, note) {
+    var p = loadProfile();
+    var wk = weekKeyNow();
+    if (p.week !== wk) { p.week = wk; p.weekPts = 0; }
+    p.allPts = (p.allPts || 0) + delta;
+    p.weekPts = (p.weekPts || 0) + delta;
+    p.history.unshift({ ts: Date.now(), type: type, delta: delta, note: note || '' });
+    p.history = p.history.slice(0, 30);
+    saveProfile(p);
+    renderMe();
+  }
+
+  var lastBoardMe = null; // 伺服器回來的本週排名/稱號
+
+  function renderMe() {
+    var p = loadProfile();
+    var wk = weekKeyNow();
+    el.meHandle.textContent = '匿名識別：牆友#' + getAnon().slice(-4).toUpperCase();
+    el.meWeekLabel.textContent = '本週分數（' + wk + '）';
+    el.mePts.textContent = String(lastBoardMe && lastBoardMe.allPts != null ? lastBoardMe.allPts : (p.allPts || 0));
+    var weekPts = p.week === wk ? p.weekPts : 0;
+    if (lastBoardMe && lastBoardMe.pts != null) weekPts = lastBoardMe.pts;
+    el.meWeekPts.textContent = String(weekPts);
+    var title = '初來報到', rankTxt = '尚未上榜';
+    if (lastBoardMe) {
+      title = lastBoardMe.title || title;
+      rankTxt = lastBoardMe.rank ? ('本週第 ' + lastBoardMe.rank + ' 名') : '尚未上榜';
+    }
+    el.meTitle.textContent = title;
+    el.meRank.textContent = lastBoardMe && lastBoardMe.rank ? ('第 ' + lastBoardMe.rank + ' 名') : '—';
+    // 記錄列表
+    el.meHistory.innerHTML = '';
+    if (!p.history.length) { el.meEmpty.hidden = false; }
+    else {
+      el.meEmpty.hidden = true;
+      p.history.slice(0, 10).forEach(function (h) {
+        var li = document.createElement('li');
+        li.className = 'fav-item';
+        var label = { post: '發一篇貼文', enc: '鼓勵了別人', encRecv: '收到一句鼓勵' }[h.type] || h.type;
+        var d = document.createElement('p');
+        d.textContent = label + (h.note ? ' — ' + h.note : '');
+        var pts = document.createElement('span');
+        pts.className = 'fav-emotion';
+        pts.textContent = (h.delta >= 0 ? '+' : '') + h.delta + ' 分';
+        li.appendChild(d);
+        li.appendChild(pts);
+        el.meHistory.appendChild(li);
+      });
+    }
+  }
+
+  function fmtTime(ts) {
+    try {
+      var d = new Date(ts);
+      return d.getMonth() + 1 + '/' + d.getDate() + ' ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+    } catch (e) { return ''; }
+  }
+
+  function loadWallMine() {
+    try {
+      var arr = JSON.parse(localStorage.getItem(WALLMINE_KEY) || '[]');
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+
+  function saveWallMine(arr) {
+    try { localStorage.setItem(WALLMINE_KEY, JSON.stringify(arr.slice(0, 60))); } catch (e) { /* ignore */ }
+  }
+
+  function esc(s) { var d = document.createElement('div'); d.textContent = String(s == null ? '' : s); return d.innerHTML; }
+
+  function wallItemHtml(item) {
+    var encs = (item.encs || []).map(function (e) {
+      return '<li class="enc-item"><span class="enc-handle">' + esc(e.handle) + '</span>：' + esc(e.text) +
+        ' <span class="hint">+' + esc(e.score) + '分</span></li>';
+    }).join('');
+    return '' +
+      '<p class="wall-text">' + esc(item.text) + '</p>' +
+      '<div class="wall-ai">' +
+        '<p><strong>承接：</strong>' + esc(item.accept) + '</p>' +
+        '<p class="quote"><strong>好話：</strong>' + esc(item.goodword) + '</p>' +
+        '<p><strong>小步：</strong>' + esc(item.smallstep) + '</p>' +
+        '<span class="hint">由 ' + esc(item.engine === 'rules' ? '規則式引擎' : 'AI 模型 ' + (item.model || item.engine)) + ' 回應 · ' + fmtTime(item.createdAt) + '</span>' +
+      '</div>' +
+      (encs ? '<ul class="enc-list">' + encs + '</ul>' : '') +
+      '<div class="enc-form">' +
+        '<input class="enc-input" maxlength="120" placeholder="留一句鼓勵的話（送出前會先經 AI 审核）…" aria-label="鼓勵的話">' +
+        '<button type="button" class="act enc-send" data-id="' + esc(item.id) + '">鼓勵她</button>' +
+      '</div>';
+  }
+
+  function renderWall(data) {
+    var items = (data && data.items) || [];
+    if (data && data.wallEnabled === false) {
+      // 降級：只顯示本機牆
+      var mine = loadWallMine();
+      el.wallStatus.textContent = '雲端好話牆尚未啟用 —— 下面只顯示你這個瀏覽器裡自己掛過的分享（分數一樣會記在你的紀錄裡）。';
+      items = mine;
+    } else {
+      el.wallStatus.textContent = '牆上共 ' + items.length + ' 篇（最新在前，保留最近 60 篇）。';
+    }
+    el.wallList.innerHTML = '';
+    el.wallEmpty.hidden = items.length > 0;
+    items.forEach(function (item) {
+      var li = document.createElement('li');
+      li.className = 'wall-item';
+      li.innerHTML = wallItemHtml(item);
+      el.wallList.appendChild(li);
+    });
+  }
+
+  function loadWall() {
+    fetch('/api/wall').then(function (r) { return r.json(); }).then(renderWall).catch(function () {
+      renderWall({ wallEnabled: false, items: loadWallMine() });
+    });
+  }
+
+  function renderBoard(data) {
+    var top = (data && data.top) || [];
+    el.boardWeek.textContent = data && data.week ? ('第 ' + data.week + ' 週 · 每週一重新計 · 前 10 名有稱號') : '';
+    el.boardList.innerHTML = '';
+    el.boardEmpty.hidden = top.length > 0;
+    top.forEach(function (t) {
+      var li = document.createElement('li');
+      li.className = 'board-item' + (data.me && t.handle === data.me.handle ? ' is-me' : '');
+      var rank = document.createElement('span');
+      rank.className = 'board-rank';
+      rank.textContent = t.rank;
+      var name = document.createElement('span');
+      name.className = 'board-name';
+      name.textContent = t.handle;
+      var title = document.createElement('span');
+      title.className = 'board-title';
+      title.textContent = t.title;
+      var pts = document.createElement('span');
+      pts.className = 'board-pts';
+      pts.textContent = t.pts + ' 分';
+      li.appendChild(rank); li.appendChild(name); li.appendChild(title); li.appendChild(pts);
+      el.boardList.appendChild(li);
+    });
+    if (data && data.me) lastBoardMe = data.me;
+    renderMe();
+  }
+
+  function loadBoard() {
+    fetch('/api/leaderboard?anon=' + encodeURIComponent(getAnon()))
+      .then(function (r) { return r.json(); })
+      .then(renderBoard)
+      .catch(function () { renderBoard({ wallEnabled: false, top: [] }); });
+  }
+
+  function publish() {
+    if (!current || published) return;
+    if (!lastText) { toast('先送出一次對話，再掛牆'); return; }
+    var btn = $('btn-publish');
+    if (btn) btn.disabled = true;
+    fetch('/api/wall', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        anon: getAnon(),
+        text: lastText,
+        ai: {
+          accept: current.accept, goodword: current.goodword, smallstep: current.smallstep,
+          engine: current.meta && current.meta.engine, model: current.meta && current.meta.model,
+        },
+      }),
+    })
+      .then(function (r) { return r.json().then(function (j) { return { status: r.status, j: j }; }); })
+      .then(function (res) {
+        var j = res.j;
+        if (j.crisis) { renderCrisis({ accept: j.accept, resources: j.resources }); return; }
+        if (!j.ok) { toast(j.error || '掛牆失敗，請稍後再試'); if (btn) btn.disabled = false; return; }
+        published = true;
+        addProfileEvent('post', j.points || 0, (j.scoreWhy || []).join('、'));
+        if (j.localOnly && j.item) {
+          var mine = loadWallMine();
+          mine.unshift(j.item);
+          saveWallMine(mine);
+        }
+        toast('已匿名掛上好話牆 +' + (j.points || 0) + ' 分' + (j.scoreWhy && j.scoreWhy.length ? '（' + j.scoreWhy.join('、') + '）' : ''));
+        loadWall();
+        loadBoard();
+      })
+      .catch(function () { toast('連線出了點問題，牆沒掛上'); if (btn) btn.disabled = false; });
+  }
+
+  function sendEncourage(itemId, inputEl, btnEl) {
+    var text = inputEl.value.trim();
+    if (!text) { toast('先寫一句鼓勵的話'); return; }
+    btnEl.disabled = true;
+    fetch('/api/encourage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ anon: getAnon(), itemId: itemId, text: text }),
+    })
+      .then(function (r) { return r.json().then(function (j) { return { status: r.status, j: j }; }); })
+      .then(function (res) {
+        var j = res.j;
+        btnEl.disabled = false;
+        if (j.crisis) { renderCrisis({ accept: j.accept, resources: j.resources }); return; }
+        if (!j.ok) { toast(j.error || '鼓勵沒送出'); return; }
+        inputEl.value = '';
+        addProfileEvent('enc', j.delta || 0, (j.scoreWhy || []).join('、'));
+        if (j.posterDelta) addProfileEvent('encRecv', j.posterDelta, '你的貼文收到鼓勵');
+        toast('鼓勵已掛上 +' + (j.delta || 0) + ' 分' + (j.posterDelta ? '，對方也獲得 +' + j.posterDelta + ' 分' : ''));
+        loadWall();
+        loadBoard();
+      })
+      .catch(function () { btnEl.disabled = false; toast('連線出了點問題'); });
+  }
+
+  // 牆上的鼓勵按鈕（事件委派）
+  el.wallList.addEventListener('click', function (ev) {
+    var btn = ev.target.closest ? ev.target.closest('.enc-send') : null;
+    if (!btn) return;
+    var form = btn.parentElement;
+    var input = form ? form.querySelector('.enc-input') : null;
+    if (input) sendEncourage(btn.getAttribute('data-id'), input, btn);
+  });
+
+  el.wallList.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Enter') return;
+    var input = ev.target.closest ? ev.target.closest('.enc-input') : null;
+    if (!input) return;
+    ev.preventDefault();
+    var btn = input.parentElement ? input.parentElement.querySelector('.enc-send') : null;
+    if (btn) sendEncourage(btn.getAttribute('data-id'), input, btn);
+  });
+
   // ── 啟動 ──────────────────────────────────────────
 
   el.counter.textContent = '0 / ' + MAXLEN;
   renderFavs();
   refreshClearBtn();
+  renderMe();
+  loadWall();
+  loadBoard();
 
   // 顯示引擎狀態（讓評審看到 AI 真的在跑；不揭露任何個資）
   fetch('/api/health').then(function (r) { return r.json(); }).then(function (h) {
