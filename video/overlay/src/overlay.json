@@ -67,7 +67,7 @@
       "side": "left",
       "params": {
         "text": "搞砸了，第一個念頭是\n「我怎麼這麼沒用」",
-        "fontSize": 64,
+        "fontSize": 76,
         "color": "accent"
       }
     },
@@ -80,7 +80,7 @@
       "params": {
         "lines": "換成別人對你說\n你早就生氣了\n對自己說，卻覺得理所當然",
         "highlight": "生氣",
-        "fontSize": 38,
+        "fontSize": 48,
         "color": "special"
       }
     },
@@ -133,7 +133,7 @@
       "side": "right",
       "params": {
         "text": "這是真實的網站畫面\n不是簡報",
-        "fontSize": 46,
+        "fontSize": 56,
         "color": "support"
       },
       "offsetY": -560
@@ -188,7 +188,7 @@
       "params": {
         "lines": "② 好話\n「我聽見你為自己講話的\n每一秒都認真」",
         "highlight": "認真",
-        "fontSize": 34,
+        "fontSize": 44,
         "color": "accent"
       },
       "offsetY": -560
@@ -258,7 +258,7 @@
       "side": "left",
       "params": {
         "text": "危機訊號\n立刻給求助資源",
-        "fontSize": 50,
+        "fontSize": 60,
         "color": "special"
       },
       "offsetY": -560
@@ -337,7 +337,7 @@
       "params": {
         "lines": "好好說話\n先對自己說一句\n再把它送給別人",
         "highlight": "好好說話",
-        "fontSize": 42,
+        "fontSize": 52,
         "color": "accent"
       }
     }

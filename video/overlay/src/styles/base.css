@@ -241,7 +241,7 @@ button { font-family: inherit; }
 }
 
 .fx-title {
-  font-size: 21px; font-weight: 600; letter-spacing: 0.1em;
+  font-size: 26px; font-weight: 600; letter-spacing: 0.1em;
   color: rgba(255, 255, 255, 0.62);
   margin-bottom: 14px;
   border-left: 3px solid var(--ac);

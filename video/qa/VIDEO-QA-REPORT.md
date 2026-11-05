@@ -157,6 +157,13 @@ S9_crisis_panel, S10_mobile_375_home, S10_mobile_375_result。
 
 ---
 
+## 8b. v3 視覺修正（2026-11-05 第二輪，回應「特效字後面背景同字/字太小/字幕醜」）
+
+- **字幕**：原 `FontSize=15,MarginV=34` 實測文字落在 y≈1612–1677、**浮在 190px 橫帶（y1730+）上方**，形成「文字懸空 + 底下空黑帶」的醜感。改為橫帶 `y=1680,h=240,alpha 0.62` + `FontSize=19,MarginV=3,Outline=2,Shadow=1`；隔離渲染實測所有 cue（最長 31 字）最多 2 行、落在 **y1671–1880、x72–1004，完全在帶內**；成片抽幀實測一致。
+- **特效卡字太小**：卡片內層原 `zoom 0.56`（24px 詞實際只有 13px）。改 `CARD_W_SCALE=0.72`，各卡字號上調（fx-title 21→26、stat 值 44→60、keyword 詞 24→32、compare 標 21→28、segment 標題 17→24、checklist 24→32、timeline 19→26、quote 預設 40→52、big-statement 預設 54→68、段頭板標題 40→52），`SUBTITLE_TOP` 對齊新帶 1680。重渲 5276 幀後 verify 全 PASS（bbox x[44..1036]、y 最大 1187 < 1680）。
+- **背景同字重複**：靜態 PNG 字卡在疊加時以 `colorchannelmixer=aa=0.22` 壓淡（尾卡 0.5），特效卡的玻璃卡疊在上面為主視覺；實測卡區中心亮度由 ~80 降到 ~45、特效卡文字亮像素仍充足（t=5s 左卡區 18864 px）。
+- v3 成片：176.0s / 34.9MB / h264 High 4.1 1080x1920@30 yuv420p + AAC 44.1k，qa_check 4 關 PASS（motion mean 14.17、靜止 1%），verify_motion PASS（demo 視窗 43.35–130.43s）。舊版備份 `out/backup_v2_176s.mp4`。
+
 ## 9. v2 合成踩過的坑（記錄，避免後人踩）
 
 1. **fade 的 st 必須是 setpts 位移「之後」的絕對秒數**：

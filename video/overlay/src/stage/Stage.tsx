@@ -11,9 +11,9 @@ const IS_EXPORT =
 export const STAGE_W = 1080
 export const STAGE_H = 1920
 const SIDE_MARGIN = 44          // 側邊距 90 -> 44px
-const CARD_W_SCALE = 0.56       // 卡寬 x0.56（zoom 縮放，字級跟著縮）
+const CARD_W_SCALE = 0.72       // 卡寬 x0.72（zoom 縮放，字級跟著縮；0.56 時小字太小）
 const CENTER_Y = STAGE_H / 2    // 卡片垂直置中 y=960
-const SUBTITLE_TOP = STAGE_H - 190  // 底部 190px 字幕帶，y>=1730 禁入
+const SUBTITLE_TOP = STAGE_H - 240  // 底部 240px 字幕帶，y>=1680 禁入
 const SEG_LEFT = 48             // 段頭板移到左上
 const SEG_TOP = 110
 
@@ -77,13 +77,13 @@ function SegmentBoard({ seg, t }: { seg: any; t: number }) {
       zIndex: 12,
     }}>
       <div style={{
-        fontSize: 15, letterSpacing: 4, fontWeight: 600,
+        fontSize: 20, letterSpacing: 4, fontWeight: 600,
         color: `var(--c-${seg.color})`, marginBottom: 10,
       }}>
         {seg.tag ?? ''}
       </div>
       <div style={{
-        fontSize: 40, fontWeight: 700, color: 'var(--c-text)',
+        fontSize: 52, fontWeight: 700, color: 'var(--c-text)',
         textShadow: '0 2px 18px rgba(0,0,0,0.45)',
       }}>
         {seg.title}

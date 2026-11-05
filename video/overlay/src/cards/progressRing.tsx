@@ -29,8 +29,8 @@ function ProgressRing({ t, enterAt, exitAt, params }: any) {
           <div className="fx-num" style={{ fontSize: 58, fontWeight: 700, color: `var(--c-${params.color})` }}>
             {countUp(t, enterAt + 150, pct * 100, Number(params.durMs ?? 1300)).toFixed(0)}%
           </div>
-          <div style={{ fontSize: 19, color: 'var(--c-muted)', marginTop: 6 }}>{params.label}</div>
-          <div className="fx-num" style={{ fontSize: 15, color: 'var(--c-muted)', marginTop: 14, opacity: clamp01(prog(t, enterAt + 1200, 400)) }}>
+          <div style={{ fontSize: 26, color: 'var(--c-muted)', marginTop: 6 }}>{params.label}</div>
+          <div className="fx-num" style={{ fontSize: 20, color: 'var(--c-muted)', marginTop: 14, opacity: clamp01(prog(t, enterAt + 1200, 400)) }}>
             {shown}% · {params.sublabel}
           </div>
         </div>

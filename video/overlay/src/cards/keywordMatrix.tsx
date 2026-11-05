@@ -27,7 +27,7 @@ function KeywordMatrix({ t, enterAt, exitAt, params }: any) {
               borderRadius: 999,
               border: `1px solid ${hot ? `var(--c-${params.color})` : 'var(--card-line)'}`,
               background: hot ? `color-mix(in srgb, var(--c-${params.color}) 14%, transparent)` : 'transparent',
-              fontSize: 24,
+              fontSize: 32,
               fontWeight: hot ? 650 : 450,
               color: hot ? `var(--c-${params.color})` : 'var(--c-muted)',
             }}>
@@ -36,7 +36,7 @@ function KeywordMatrix({ t, enterAt, exitAt, params }: any) {
           )
         })}
       </div>
-      <div style={{ marginTop: 20, fontSize: 15, letterSpacing: 3, color: 'var(--c-muted)', opacity: fade * clamp01(prog(t, enterAt + 500, 500)) }}>
+      <div style={{ marginTop: 20, fontSize: 20, letterSpacing: 3, color: 'var(--c-muted)', opacity: fade * clamp01(prog(t, enterAt + 500, 500)) }}>
         {params.tagline ?? ''}
       </div>
     </CardShell>

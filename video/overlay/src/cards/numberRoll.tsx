@@ -21,7 +21,7 @@ function NumberRoll({ t, enterAt, exitAt, params }: any) {
           {params.suffix}
         </div>
         {params.caption ? (
-          <div style={{ fontSize: 19, color: 'var(--c-muted)', marginTop: 10 }}>{params.caption}</div>
+          <div style={{ fontSize: 26, color: 'var(--c-muted)', marginTop: 10 }}>{params.caption}</div>
         ) : null}
       </div>
     </CardShell>

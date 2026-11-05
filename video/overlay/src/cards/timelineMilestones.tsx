@@ -34,7 +34,7 @@ function TimelineMilestones({ t, enterAt, exitAt, params }: any) {
                   border: `2px solid var(--c-${params.color})`,
                   background: `color-mix(in srgb, var(--c-${params.color}) ${Math.round(p * 85)}%, transparent)`,
                 }} />
-                <div style={{ fontSize: 19, color: 'var(--c-text)', textAlign: 'center', lineHeight: 1.35 }}>{label}</div>
+                <div style={{ fontSize: 26, color: 'var(--c-text)', textAlign: 'center', lineHeight: 1.35 }}>{label}</div>
               </div>
             )
           })}

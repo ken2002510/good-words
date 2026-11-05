@@ -25,7 +25,7 @@ function QuoteReveal({ t, enterAt, exitAt, params }: any) {
           return (
             <div key={i} style={{
               opacity: a, transform: `translateY(${rise}px)`,
-              fontSize: Number(params.fontSize ?? 40),
+              fontSize: Number(params.fontSize ?? 52),
               fontWeight: 650, lineHeight: 1.42,
               letterSpacing: '0.5px',
               color: 'var(--c-text)',
@@ -57,7 +57,7 @@ export const quoteReveal: EffectDef = {
     { key: 'lines', label: '金句（每行一句）', type: 'textarea', default: '好的工具不該被看見\n它只是讓想法\n更快落到螢幕上' },
     { key: 'highlight', label: '高亮詞', type: 'text', default: '想法' },
     { key: 'lineGap', label: '行間隔(ms)', type: 'range', min: 120, max: 500, step: 10, default: 260 },
-    { key: 'fontSize', label: '字號', type: 'range', min: 28, max: 56, step: 1, default: 40 },
+    { key: 'fontSize', label: '字號', type: 'range', min: 36, max: 72, step: 1, default: 52 },
     { key: 'color', label: '語意色', type: 'semantic', default: 'special' },
   ],
   component: QuoteReveal,

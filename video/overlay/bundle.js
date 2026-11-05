@@ -7408,7 +7408,7 @@
           countUp(t, enterAt + 150, val, Number(params.durMs ?? 1200)).toFixed(dec),
           params.suffix
         ] }),
-        params.caption ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: { fontSize: 19, color: "var(--c-muted)", marginTop: 10 }, children: params.caption }) : null
+        params.caption ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: { fontSize: 26, color: "var(--c-muted)", marginTop: 10 }, children: params.caption }) : null
       ] })
     ] });
   }
@@ -7450,7 +7450,7 @@
     const rowA = clamp01(prog(t, enterAt + 60, 360)) * fade;
     const rowB = clamp01(prog(t, enterAt + 220, 360)) * fade;
     const Row = ({ label, val, color, alpha }) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: { opacity: alpha }, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 21, marginBottom: 8 }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 28, marginBottom: 8 }, children: [
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: { color: "var(--c-text)" }, children: label }),
         /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { className: "fx-num", style: { color: `var(--c-${color})` }, children: [
           Math.round(val * p * 100),
@@ -7471,7 +7471,7 @@
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Row, { label: params.leftLabel, val: lv, color: params.leftColor, alpha: rowA }),
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Row, { label: params.rightLabel, val: rv, color: params.rightColor, alpha: rowB })
       ] }),
-      params.footnote ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: { marginTop: 24, fontSize: 17, color: "var(--c-muted)", opacity: fade }, children: params.footnote }) : null
+      params.footnote ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: { marginTop: 24, fontSize: 22, color: "var(--c-muted)", opacity: fade }, children: params.footnote }) : null
     ] });
   }
   var import_jsx_runtime3, compareBars;
@@ -7525,7 +7525,7 @@
         return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: {
           opacity: a,
           transform: `translateY(${rise}px)`,
-          fontSize: Number(params.fontSize ?? 40),
+          fontSize: Number(params.fontSize ?? 52),
           fontWeight: 650,
           lineHeight: 1.42,
           letterSpacing: "0.5px",
@@ -7554,7 +7554,7 @@
           { key: "lines", label: "\u91D1\u53E5\uFF08\u6BCF\u884C\u4E00\u53E5\uFF09", type: "textarea", default: "\u597D\u7684\u5DE5\u5177\u4E0D\u8A72\u88AB\u770B\u898B\n\u5B83\u53EA\u662F\u8B93\u60F3\u6CD5\n\u66F4\u5FEB\u843D\u5230\u87A2\u5E55\u4E0A" },
           { key: "highlight", label: "\u9AD8\u4EAE\u8A5E", type: "text", default: "\u60F3\u6CD5" },
           { key: "lineGap", label: "\u884C\u9593\u9694(ms)", type: "range", min: 120, max: 500, step: 10, default: 260 },
-          { key: "fontSize", label: "\u5B57\u865F", type: "range", min: 28, max: 56, step: 1, default: 40 },
+          { key: "fontSize", label: "\u5B57\u865F", type: "range", min: 36, max: 72, step: 1, default: 52 },
           { key: "color", label: "\u8A9E\u610F\u8272", type: "semantic", default: "special" }
         ],
         component: QuoteReveal
@@ -7587,8 +7587,8 @@
           borderRadius: 16,
           padding: "16px 20px"
         }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { fontSize: 16, color: "var(--c-muted)", marginBottom: 6 }, children: label }),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "fx-num", style: { fontSize: 44, fontWeight: 700, color: `var(--c-${params.color})` }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { fontSize: 22, color: "var(--c-muted)", marginBottom: 6 }, children: label }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "fx-num", style: { fontSize: 60, fontWeight: 700, color: `var(--c-${params.color})` }, children: [
             pre,
             m ? countUp(t, enterAt + i * 160, num, 1100).toFixed(dec) : "",
             suf
@@ -7653,8 +7653,8 @@
             countUp(t, enterAt + 150, pct * 100, Number(params.durMs ?? 1300)).toFixed(0),
             "%"
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: { fontSize: 19, color: "var(--c-muted)", marginTop: 6 }, children: params.label }),
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "fx-num", style: { fontSize: 15, color: "var(--c-muted)", marginTop: 14, opacity: clamp01(prog(t, enterAt + 1200, 400)) }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: { fontSize: 26, color: "var(--c-muted)", marginTop: 6 }, children: params.label }),
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "fx-num", style: { fontSize: 20, color: "var(--c-muted)", marginTop: 14, opacity: clamp01(prog(t, enterAt + 1200, 400)) }, children: [
             shown,
             "% \xB7 ",
             params.sublabel
@@ -7736,12 +7736,12 @@
           borderRadius: 999,
           border: `1px solid ${hot ? `var(--c-${params.color})` : "var(--card-line)"}`,
           background: hot ? `color-mix(in srgb, var(--c-${params.color}) 14%, transparent)` : "transparent",
-          fontSize: 24,
+          fontSize: 32,
           fontWeight: hot ? 650 : 450,
           color: hot ? `var(--c-${params.color})` : "var(--c-muted)"
         }, children: w }, i);
       }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { style: { marginTop: 20, fontSize: 15, letterSpacing: 3, color: "var(--c-muted)", opacity: fade * clamp01(prog(t, enterAt + 500, 500)) }, children: params.tagline ?? "" })
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { style: { marginTop: 20, fontSize: 20, letterSpacing: 3, color: "var(--c-muted)", opacity: fade * clamp01(prog(t, enterAt + 500, 500)) }, children: params.tagline ?? "" })
     ] });
   }
   var import_jsx_runtime7, keywordMatrix;
@@ -7806,7 +7806,7 @@
             border: `2px solid var(--c-${params.color})`,
             background: `color-mix(in srgb, var(--c-${params.color}) ${Math.round(p * 85)}%, transparent)`
           } }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { fontSize: 19, color: "var(--c-text)", textAlign: "center", lineHeight: 1.35 }, children: label })
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { fontSize: 26, color: "var(--c-text)", textAlign: "center", lineHeight: 1.35 }, children: label })
         ] }, i);
       }) })
     ] }) });
@@ -7860,11 +7860,11 @@
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: 19,
+          fontSize: 26,
           fontWeight: 650,
           color: doneP > 0.5 ? `var(--c-${params.doneColor})` : "var(--c-muted)"
         }, children: doneP > 0.5 ? "\u2713" : String(i + 1) }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { style: { fontSize: 24, color: "var(--c-text)" }, children: txt })
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { style: { fontSize: 32, color: "var(--c-text)" }, children: txt })
       ] }, i);
     }) }) });
   }
@@ -7901,7 +7901,7 @@
     const lineP = easeOutCubic(prog(t, enterAt + 260, 700));
     return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(CardShell, { t, enterAt, exitAt, style: { padding: "10px 6px" }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { style: {
-        fontSize: Number(params.fontSize ?? 54),
+        fontSize: Number(params.fontSize ?? 68),
         fontWeight: 650,
         lineHeight: 1.35,
         letterSpacing: "1px",
@@ -7934,7 +7934,7 @@
         width: 760,
         params: [
           { key: "text", label: "\u6587\u5B57", type: "textarea", default: "\u52D5\u6548\u4E0D\u662F\u52A0\u6CD5\n\u662F\u6E1B\u6CD5" },
-          { key: "fontSize", label: "\u5B57\u865F", type: "range", min: 36, max: 88, step: 2, default: 54 },
+          { key: "fontSize", label: "\u5B57\u865F", type: "range", min: 44, max: 104, step: 2, default: 68 },
           { key: "color", label: "\u8A9E\u610F\u8272", type: "semantic", default: "accent" }
         ],
         component: BigStatement
@@ -7964,7 +7964,7 @@
           transform: `translateX(${(1 - eased) * -16}px)`
         }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { style: {
-            fontSize: 11,
+            fontSize: 15,
             fontWeight: 700,
             letterSpacing: 1.5,
             padding: "3px 8px",
@@ -7973,7 +7973,7 @@
             color: `var(--c-${params.color})`,
             opacity: lit ? 1 : 0.35
           }, children: it.tag || "\xB7" }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { style: { fontSize: 17, fontWeight: 600, color: "var(--c-text)" }, children: it.title }),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { style: { fontSize: 24, fontWeight: 600, color: "var(--c-text)" }, children: it.title }),
           /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { style: {
             marginLeft: "auto",
             width: 7,
@@ -8120,14 +8120,14 @@
       zIndex: 12
     }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { style: {
-        fontSize: 15,
+        fontSize: 20,
         letterSpacing: 4,
         fontWeight: 600,
         color: `var(--c-${seg.color})`,
         marginBottom: 10
       }, children: seg.tag ?? "" }),
       /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { style: {
-        fontSize: 40,
+        fontSize: 52,
         fontWeight: 700,
         color: "var(--c-text)",
         textShadow: "0 2px 18px rgba(0,0,0,0.45)"
@@ -8231,9 +8231,9 @@
       STAGE_W = 1080;
       STAGE_H = 1920;
       SIDE_MARGIN = 44;
-      CARD_W_SCALE = 0.56;
+      CARD_W_SCALE = 0.72;
       CENTER_Y = STAGE_H / 2;
-      SUBTITLE_TOP = STAGE_H - 190;
+      SUBTITLE_TOP = STAGE_H - 240;
       SEG_LEFT = 48;
       SEG_TOP = 110;
       clamp01_ = (x) => Math.max(0, Math.min(1, x));
@@ -8391,7 +8391,7 @@
             side: "left",
             params: {
               text: "\u641E\u7838\u4E86\uFF0C\u7B2C\u4E00\u500B\u5FF5\u982D\u662F\n\u300C\u6211\u600E\u9EBC\u9019\u9EBC\u6C92\u7528\u300D",
-              fontSize: 64,
+              fontSize: 76,
               color: "accent"
             }
           },
@@ -8404,7 +8404,7 @@
             params: {
               lines: "\u63DB\u6210\u5225\u4EBA\u5C0D\u4F60\u8AAA\n\u4F60\u65E9\u5C31\u751F\u6C23\u4E86\n\u5C0D\u81EA\u5DF1\u8AAA\uFF0C\u537B\u89BA\u5F97\u7406\u6240\u7576\u7136",
               highlight: "\u751F\u6C23",
-              fontSize: 38,
+              fontSize: 48,
               color: "special"
             }
           },
@@ -8457,7 +8457,7 @@
             side: "right",
             params: {
               text: "\u9019\u662F\u771F\u5BE6\u7684\u7DB2\u7AD9\u756B\u9762\n\u4E0D\u662F\u7C21\u5831",
-              fontSize: 46,
+              fontSize: 56,
               color: "support"
             },
             offsetY: -560
@@ -8512,7 +8512,7 @@
             params: {
               lines: "\u2461 \u597D\u8A71\n\u300C\u6211\u807D\u898B\u4F60\u70BA\u81EA\u5DF1\u8B1B\u8A71\u7684\n\u6BCF\u4E00\u79D2\u90FD\u8A8D\u771F\u300D",
               highlight: "\u8A8D\u771F",
-              fontSize: 34,
+              fontSize: 44,
               color: "accent"
             },
             offsetY: -560
@@ -8582,7 +8582,7 @@
             side: "left",
             params: {
               text: "\u5371\u6A5F\u8A0A\u865F\n\u7ACB\u523B\u7D66\u6C42\u52A9\u8CC7\u6E90",
-              fontSize: 50,
+              fontSize: 60,
               color: "special"
             },
             offsetY: -560
@@ -8661,7 +8661,7 @@
             params: {
               lines: "\u597D\u597D\u8AAA\u8A71\n\u5148\u5C0D\u81EA\u5DF1\u8AAA\u4E00\u53E5\n\u518D\u628A\u5B83\u9001\u7D66\u5225\u4EBA",
               highlight: "\u597D\u597D\u8AAA\u8A71",
-              fontSize: 42,
+              fontSize: 52,
               color: "accent"
             }
           }

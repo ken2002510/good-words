@@ -11,7 +11,7 @@ function BigStatement({ t, enterAt, exitAt, params }: any) {
   return (
     <CardShell t={t} enterAt={enterAt} exitAt={exitAt} style={{ padding: '10px 6px' }}>
       <div style={{
-        fontSize: Number(params.fontSize ?? 54), fontWeight: 650,
+        fontSize: Number(params.fontSize ?? 68), fontWeight: 650,
         lineHeight: 1.35, letterSpacing: '1px',
         color: `var(--c-${params.color})`,
         opacity: a,
@@ -38,7 +38,7 @@ export const bigStatement: EffectDef = {
   width: 760,
   params: [
     { key: 'text', label: '文字', type: 'textarea', default: '動效不是加法\n是減法' },
-    { key: 'fontSize', label: '字號', type: 'range', min: 36, max: 88, step: 2, default: 54 },
+    { key: 'fontSize', label: '字號', type: 'range', min: 44, max: 104, step: 2, default: 68 },
     { key: 'color', label: '語意色', type: 'semantic', default: 'accent' },
   ],
   component: BigStatement,

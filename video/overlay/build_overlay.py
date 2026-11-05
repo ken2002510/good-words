@@ -42,10 +42,10 @@ NORMAL_DIM = 0.40
 # key = timeline idx；value = list of card specs（一個 run 安排多張卡時依序平分 run 視窗）
 PLAN: dict[int, list[dict]] = {
     1: [dict(effect="big-statement", side="left", params=dict(
-        text="搞砸了，第一個念頭是\n「我怎麼這麼沒用」", fontSize=64, color="accent"))],
+        text="搞砸了，第一個念頭是\n「我怎麼這麼沒用」", fontSize=76, color="accent"))],
     2: [dict(effect="quote-reveal", side="right", params=dict(
         lines="換成別人對你說\n你早就生氣了\n對自己說，卻覺得理所當然",
-        highlight="生氣", fontSize=38, color="special"))],
+        highlight="生氣", fontSize=48, color="special"))],
     3: [dict(effect="timeline-milestones", side="left", params=dict(
         items="打進心事\n接住情緒\n給你一句好話", color="support", spreadMs=1400))],
     4: [dict(effect="stat-board", side="right", params=dict(
@@ -57,7 +57,7 @@ PLAN: dict[int, list[dict]] = {
         footnote="也不假裝你的困難不存在"))],
     # ---- demo 段（seg3/seg4）：offsetY 上移、dim 0.12 ----
     6: [dict(effect="big-statement", side="right", params=dict(
-        text="這是真實的網站畫面\n不是簡報", fontSize=46, color="support"))],
+        text="這是真實的網站畫面\n不是簡報", fontSize=56, color="support"))],
     7: [dict(effect="progress-ring", side="left", params=dict(
         title="心事已送出", percent=100, durMs=900,
         label="不用修飾", sublabel="直接打出來", color="data"))],
@@ -68,7 +68,7 @@ PLAN: dict[int, list[dict]] = {
         items="① 承接\n用它的話，把處境說一次", doneColor="special"))],
     10: [dict(effect="quote-reveal", side="right", params=dict(
         lines="② 好話\n「我聽見你為自己講話的\n每一秒都認真」",
-        highlight="認真", fontSize=34, color="accent"))],
+        highlight="認真", fontSize=44, color="accent"))],
     11: [dict(effect="step-checklist", side="left", params=dict(
         items="③ 小步\n今晚就能做的一件小事", doneColor="data"))],
     12: [dict(effect="keyword-matrix", side="right", params=dict(
@@ -82,7 +82,7 @@ PLAN: dict[int, list[dict]] = {
         title="收藏清單",
         stats="存在:你的瀏覽器\n登入:不用\n上傳:不會\n帳號:不綁", color="data"))],
     15: [dict(effect="big-statement", side="left", params=dict(
-        text="危機訊號\n立刻給求助資源", fontSize=50, color="special"))],
+        text="危機訊號\n立刻給求助資源", fontSize=60, color="special"))],
     16: [dict(effect="stat-board", side="right", params=dict(
         title="求助資源",
         stats="1925:安心專線\n1995:生命線\n1980:張老師\n底線:AI 不當諮商師", color="special"))],
@@ -105,7 +105,7 @@ PLAN: dict[int, list[dict]] = {
     ],
     19: [dict(effect="quote-reveal", side="right", params=dict(
         lines="好好說話\n先對自己說一句\n再把它送給別人",
-        highlight="好好說話", fontSize=42, color="accent"))],
+        highlight="好好說話", fontSize=52, color="accent"))],
 }
 
 # 段頭板（segs[]）：依 timeline 的 seg 欄位分組，標題/標籤/色固定，時間由段邊界推導

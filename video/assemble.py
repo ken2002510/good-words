@@ -233,6 +233,8 @@ def main() -> int:
             continue
         idx = IDX_CARD0 + i
         tag = f"c{i}"
+        # 靜態字卡壓到低 alpha（尾卡較亮）：避免和 overlay 動態字卡的文字在背景重複出現
+        card_aa = 0.5 if is_last else 0.22
         # 淡入／淡出必須寫在 setpts 位移「之後」，且 st 用**絕對秒數**：
         # setpts=PTS-STARTPTS+a/TB 之後，串流的 pts 已是絕對時間（a+k/25），
         # 所以 fade=t=in 用 st=a、fade=t=out 用 st=b-0.6。
@@ -243,6 +245,7 @@ def main() -> int:
             f"fade=t=out:st={max(0.0, b - 0.6):.3f}:d=0.6:alpha=1,"
         f.append(
             f"[{idx}:v]format=rgba,"
+            f"colorchannelmixer=aa={card_aa},"
             f"setpts=PTS-STARTPTS+{a:.3f}/TB,"
             f"{fade_in}{fade_out}"
             f"null[{tag}]"
@@ -285,17 +288,18 @@ def main() -> int:
     shifted = AUDIO / "subtitles_shifted.srt"
     _shift_srt(srt, shifted, head_pad)
     esc = str(shifted).replace("\\", "/").replace(":", "\\:")
-    band_h = 190                          # 字幕橫帶高度
+    band_h = 240                          # 字幕橫帶高度（y=1680..1920 安全區）
     band_y = H - band_h
     f.append(
         f"[{cur}]drawbox=x=0:y={band_y}:w={W}:h={band_h}:"
-        f"color=0x120E0C@0.82:t=fill[vband]"
+        f"color=0x120E0C@0.62:t=fill[vband]"
     )
+    # 字號加大、MarginV 收小讓文字落進橫帶內（實測 FontSize=15/MarginV=34會浮在帶上方）
     f.append(
         f"[vband]subtitles='{esc}':"
-        f"force_style='FontName=Microsoft JhengHei,FontSize=15,"
+        f"force_style='FontName=Microsoft JhengHei,FontSize=19,"
         f"PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1,"
-        f"Outline=2,Shadow=0,Alignment=2,MarginV=34'[vout]"
+        f"Outline=2,Shadow=1,Alignment=2,MarginV=3'[vout]"
     )
 
     cmd += [
