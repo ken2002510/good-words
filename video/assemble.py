@@ -172,12 +172,16 @@ def main() -> int:
     vo_wav = AUDIO / "narration_full.wav"
     concat_audio(tl, 0.0, vo_wav)
 
+    bg_mp4 = ASSETS / "bg" / "bg.mp4"
+    if not bg_mp4.exists():
+        print("!! 找不到 assets/bg/bg.mp4 —— 請先跑 gen_bg.py")
+        return 5
     cmd = [
         "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
-        # 0: 背景色（整片）。多給 10s 緩衝：
-        # 它是最底層的底，若長度剛好等於 total，片尾最後幾格會因為
-        # 上游 EOF 而變空白（先前抽幀看到 167s 之後全空）。
-        "-f", "lavfi", "-i", f"color=c={BG}:s={W}x{H}:r={FPS}:d={total + 10.0:.3f}",
+        # 0: 生成的動畫背景（gen_bg.py，分段暖色光斑，長度 total+2s）。
+        # 用 -stream_loop -1 無限迴圈當底（-loop 只給 image2 用）；
+        # 片尾 EOF 空白由 [0:v]trim 控制。
+        "-stream_loop", "-1", "-i", str(bg_mp4),
         # 1: demo 錄影
         "-i", str(demo_raw),
         # 2: 旁白
@@ -233,8 +237,8 @@ def main() -> int:
             continue
         idx = IDX_CARD0 + i
         tag = f"c{i}"
-        # 靜態字卡壓到低 alpha（尾卡較亮）：避免和 overlay 動態字卡的文字在背景重複出現
-        card_aa = 0.5 if is_last else 0.22
+        # 靜態字卡壓到低 alpha（尾卡較亮）：背景現在是生成圖，避免和 overlay 動態字卡的文字重疊
+        card_aa = 0.55 if is_last else 0.12
         # 淡入／淡出必須寫在 setpts 位移「之後」，且 st 用**絕對秒數**：
         # setpts=PTS-STARTPTS+a/TB 之後，串流的 pts 已是絕對時間（a+k/25），
         # 所以 fade=t=in 用 st=a、fade=t=out 用 st=b-0.6。
@@ -288,24 +292,25 @@ def main() -> int:
     shifted = AUDIO / "subtitles_shifted.srt"
     _shift_srt(srt, shifted, head_pad)
     esc = str(shifted).replace("\\", "/").replace(":", "\\:")
-    band_h = 240                          # 字幕橫帶高度（y=1680..1920 安全區）
+    band_h = 220                          # 字幕橫帶高度（y=1700..1920 安全區）
     band_y = H - band_h
     f.append(
         f"[{cur}]drawbox=x=0:y={band_y}:w={W}:h={band_h}:"
-        f"color=0x120E0C@0.62:t=fill[vband]"
+        f"color=0x120E0C@0.55:t=fill[vband]"
     )
-    # 字號加大、MarginV 收小讓文字落進橫帶內（實測 FontSize=15/MarginV=34會浮在帶上方）
+    # v4：字號縮小（19→16）、上移（MarginV 3→12），避免「太大又太下面」；
+    # 實測 FontSize=15/MarginV=34 會浮在帶上方，此組合讓兩行落在 y≈1700-1830
     f.append(
         f"[vband]subtitles='{esc}':"
-        f"force_style='FontName=Microsoft JhengHei,FontSize=19,"
+        f"force_style='FontName=Microsoft JhengHei,FontSize=16,"
         f"PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1,"
-        f"Outline=2,Shadow=1,Alignment=2,MarginV=3'[vout]"
+        f"Outline=1,Shadow=1,Alignment=2,MarginV=12'[vout]"
     )
 
     cmd += [
         "-filter_complex", ";".join(f),
         "-map", "[vout]", "-map", "2:a",
-        "-c:v", "libx264", "-preset", "medium", "-crf", "20",
+        "-c:v", "libx264", "-preset", "medium", "-crf", "23",
         "-pix_fmt", "yuv420p", "-profile:v", "high", "-level", "4.1",
         "-r", str(FPS), "-g", str(FPS * 2),
         "-c:a", "aac", "-b:a", "160k", "-ar", "44100", "-ac", "2",

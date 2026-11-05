@@ -13,7 +13,7 @@ export const STAGE_H = 1920
 const SIDE_MARGIN = 44          // 側邊距 90 -> 44px
 const CARD_W_SCALE = 0.72       // 卡寬 x0.72（zoom 縮放，字級跟著縮；0.56 時小字太小）
 const CENTER_Y = STAGE_H / 2    // 卡片垂直置中 y=960
-const SUBTITLE_TOP = STAGE_H - 240  // 底部 240px 字幕帶，y>=1680 禁入
+const SUBTITLE_TOP = STAGE_H - 220  // 底部 220px 字幕帶，y>=1700 禁入
 const SEG_LEFT = 48             // 段頭板移到左上
 const SEG_TOP = 110
 

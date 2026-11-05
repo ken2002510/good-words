@@ -7246,7 +7246,7 @@
   });
 
   // src/core/clock.ts
-  var VirtualClock, clock, clamp01, prog, easeOutCubic, easeOutExpo, countUp, outFade;
+  var VirtualClock, clock, clamp01, prog, easeOutCubic, easeOutExpo, easeOutBack, countUp, outFade;
   var init_clock = __esm({
     "src/core/clock.ts"() {
       VirtualClock = class {
@@ -7318,6 +7318,12 @@
       prog = (t, at, dur) => clamp01((t - at) / Math.max(1, dur));
       easeOutCubic = (p) => 1 - Math.pow(1 - clamp01(p), 3);
       easeOutExpo = (p) => p >= 1 ? 1 : 1 - Math.pow(2, -10 * clamp01(p));
+      easeOutBack = (p) => {
+        const c1 = 1.70158;
+        const c3 = c1 + 1;
+        const x = clamp01(p) - 1;
+        return 1 + c3 * x * x * x + c1 * x * x;
+      };
       countUp = (t, at, target, dur = 1200) => target * easeOutExpo(prog(t, at, dur));
       outFade = (t, exitAt) => 1 - clamp01((t - exitAt) / 260);
     }
@@ -7369,6 +7375,8 @@
       CardShell = ({ t, enterAt, exitAt, style, children }) => {
         const a = clamp01(prog(t, enterAt, 420));
         const rise = (1 - easeOutCubic(prog(t, enterAt, 520))) * 22;
+        const pop = easeOutBack(prog(t, enterAt, 520));
+        const scale = 0.62 + 0.38 * pop;
         const fade = 1 - clamp01((t - exitAt) / 260);
         const alpha = Math.min(a, fade);
         if (alpha <= 1e-3) return null;
@@ -7376,7 +7384,12 @@
           "div",
           {
             className: "fx-card",
-            style: { opacity: alpha, transform: `translateY(${rise}px)`, ...style },
+            style: {
+              opacity: alpha,
+              transform: `translateY(${rise}px) scale(${scale})`,
+              transformOrigin: "50% 60%",
+              ...style
+            },
             children
           }
         );
@@ -8233,7 +8246,7 @@
       SIDE_MARGIN = 44;
       CARD_W_SCALE = 0.72;
       CENTER_Y = STAGE_H / 2;
-      SUBTITLE_TOP = STAGE_H - 240;
+      SUBTITLE_TOP = STAGE_H - 220;
       SEG_LEFT = 48;
       SEG_TOP = 110;
       clamp01_ = (x) => Math.max(0, Math.min(1, x));

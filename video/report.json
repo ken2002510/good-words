@@ -92,15 +92,15 @@
     "4_motion": {
       "pass": true,
       "detail": [
-        "取樣 185 對相鄰幀：平均差異 14.17，近乎靜止的比例 1%",
+        "取樣 185 對相鄰幀：平均差異 18.85，近乎靜止的比例 0%",
         "✓ 畫面持續變化，符合真實操作畫面"
       ],
-      "mean_diff": 14.171,
-      "static_ratio": 0.005
+      "mean_diff": 18.854,
+      "static_ratio": 0.0
     }
   },
   "duration_s": 176.0,
-  "size_mb": 34.94,
+  "size_mb": 49.92,
   "audio": {
     "codec": "aac",
     "ch": 2,

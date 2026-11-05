@@ -164,6 +164,24 @@ S9_crisis_panel, S10_mobile_375_home, S10_mobile_375_result。
 - **背景同字重複**：靜態 PNG 字卡在疊加時以 `colorchannelmixer=aa=0.22` 壓淡（尾卡 0.5），特效卡的玻璃卡疊在上面為主視覺；實測卡區中心亮度由 ~80 降到 ~45、特效卡文字亮像素仍充足（t=5s 左卡區 18864 px）。
 - v3 成片：176.0s / 34.9MB / h264 High 4.1 1080x1920@30 yuv420p + AAC 44.1k，qa_check 4 關 PASS（motion mean 14.17、靜止 1%），verify_motion PASS（demo 視窗 43.35–130.43s）。舊版備份 `out/backup_v2_176s.mp4`。
 
+## 8c. v4 背景生成 + 字卡跳出 + 字幕再修（2026-11-06 第三輪）
+
+回應「背景去生成、字要跳出來、不要只擺字；字幕還是醜、太大又太下面」。
+
+- **生成背景**：NIM 此 key 無生圖模型授權（`/v1/images/generations` 404），改程序化生成——
+  `gen_bg.py` 在 270x480 float 場疊 12 個種子確定性漂移高斯光斑，依 timeline 各 run 換暖色
+  palette（邊界 2s 交叉淡變）+ film grain + vignette，放大到 1080x1920@30輸出 `assets/bg/bg.mp4`
+  （178s，crf18）。assemble.py 底層由純色改疊 bg.mp4（`-stream_loop -1`；`-loop` 只給 image2 用）。
+  實測卡段背景 std 13–66（v3 純色 ≈0）、demo 視窗仍由真實錄影覆蓋。
+- **字卡跳出（pop）**：`clock.ts` 新增 `easeOutBack`，`CardShell` 進場改
+  `translateY(rise) scale(0.62→1 with overshoot)`，transform-origin 50% 60%。重渲 5276 幀 verify 全 PASS。
+- **字幕再修**：`FontSize 19→16`、`MarginV 3→12`（文字上移，底部留白 40→97px）、`Outline 2→1`、
+  橫帶 `y=1700,h=220,alpha 0.55`；`Stage.SUBTITLE_TOP` 對齊 1700。隔離渲染實測：行高 70px、
+  底行 y1753–1823、常見 1–2 行落帶內、最長 31 字 x 寬 ≤ 930px。
+- **靜態字卡再壓淡**（aa 0.22→0.12，尾卡 0.55）：生成背景上不再有同字鬼影。
+- v4 成片：176.0s / **49.9 MB**（crf 20→23，動態背景+grain 在 crf20 會到 81MB）/ h264 1080x1920@30
+  yuv420p + AAC 44.1k，qa_check 4 關 PASS、verify_motion PASS。備份 `out/backup_v3_176s.mp4`。
+
 ## 9. v2 合成踩過的坑（記錄，避免後人踩）
 
 1. **fade 的 st 必須是 setpts 位移「之後」的絕對秒數**：

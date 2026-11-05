@@ -95,6 +95,14 @@ export const easeOutCubic = (p: number): number => 1 - Math.pow(1 - clamp01(p), 
 export const easeOutExpo = (p: number): number =>
   p >= 1 ? 1 : 1 - Math.pow(2, -10 * clamp01(p))
 
+/** overshoot 回彈（跳出感）：0→1 過頭到 ~1.1 再回 1 */
+export const easeOutBack = (p: number): number => {
+  const c1 = 1.70158
+  const c3 = c1 + 1
+  const x = clamp01(p) - 1
+  return 1 + c3 * x * x * x + c1 * x * x
+}
+
 /** 數字滾動：at 起 dur 內從 0 滾到 target */
 export const countUp = (t: number, at: number, target: number, dur = 1200): number =>
   target * easeOutExpo(prog(t, at, dur))
