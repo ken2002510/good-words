@@ -39,8 +39,9 @@ INSET_MS = 150          # 卡窗內縮
 DEMO_OFFSET_Y = -560    # demo 段卡片上移
 DEMO_DIM = 0.04   # demo 段幾乎不壓暗：真實網站畫面要清楚（評審要看得出是真的在用）
 NORMAL_DIM = 0.40
-# 個別段落覆寫暗化值：seg2 後半要播「全幅真實截圖」，壓暗要輕
-SEG_DIM = {2: 0.15}
+# 個別段落覆寫暗化值：seg2/seg5 都在播「真實截圖」，壓暗要輕（複驗指出 seg5 仍像抽象模板）
+SEG_DIM = {2: 0.15, 5: 0.18}
+CARD_W_SEG5 = 700     # seg5 卡片略窄，讓背後的好話牆真截圖露出來
 
 # ---------------------------------------------------------------- 19 段編排
 # key = timeline idx；value = list of card specs（一個 run 安排多張卡時依序平分 run 視窗）
@@ -189,7 +190,8 @@ def build() -> dict:
                 "params": spec["params"],
                 # 統一卡寬（約畫面 73%/66%）：左右兩側寬度一致才平衡；
                 # demo 段略窄，保留真實網站畫面可見面積。
-                "width": CARD_W_DEMO if is_demo else CARD_W,
+                "width": (CARD_W_DEMO if is_demo
+                          else (CARD_W_SEG5 if all(it["seg"] == 5 for it in items) else CARD_W)),
             }
             if is_demo:
                 card["offsetY"] = DEMO_OFFSET_Y

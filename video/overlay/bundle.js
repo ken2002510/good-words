@@ -8397,7 +8397,7 @@
             color: "accent",
             start: 142678,
             end: 164854,
-            dimAt: 0.4
+            dimAt: 0.18
           },
           {
             id: "seg-6",
@@ -8655,7 +8655,7 @@
               stats: "\u533F\u540D\u639B\u7246:\u662F\nAI \u5148\u56DE\u61C9:\u4E00\u8F2A\n\u9F13\u52F5\u7D93 AI \u5BE9\u6838:\u624D\u986F\u793A\n\u96D9\u65B9\u5F97\u5206:\u662F",
               color: "data"
             },
-            width: 860
+            width: 700
           },
           {
             id: "c18-2",
@@ -8671,7 +8671,7 @@
               durMs: 1400,
               color: "special"
             },
-            width: 860
+            width: 700
           },
           {
             id: "c18-3",
@@ -8684,7 +8684,7 @@
               items: "\u91CD\u7B97|\u6BCF\u9031\u4E00\u91CD\u7B97\u6392\u884C\u699C\n\u516C\u958B|\u6392\u884C\u699C\u516C\u958B\u900F\u660E\n\u7A31\u865F|\u524D\u5341\u540D\u6709\u7A31\u865F\n\u96B1\u79C1|\u5206\u6578\u53EA\u5B58\u5728\u4F60\u7684\u700F\u89BD\u5668",
               color: "support"
             },
-            width: 860
+            width: 700
           },
           {
             id: "c19",
