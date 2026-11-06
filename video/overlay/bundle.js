@@ -7438,7 +7438,7 @@
         desc: "\u5927\u865F\u6578\u5B57\u5F9E\u96F6\u6EFE\u52D5\u5230\u76EE\u6A19\u503C\uFF0C\u914D\u6A19\u984C\u8207\u5099\u8A3B",
         side: "left",
         track: "data",
-        width: 560,
+        width: 640,
         params: [
           { key: "title", label: "\u6A19\u984C", type: "text", default: "\u51FA\u7247\u8017\u6642" },
           { key: "value", label: "\u76EE\u6A19\u6578\u503C", type: "number", default: 3 },
@@ -7500,7 +7500,7 @@
         desc: "\u5169\u689D\u6A6B\u5411\u9032\u5EA6\u689D\u5148\u5F8C\u751F\u9577\uFF0C\u76F4\u89C0\u5C0D\u6BD4\u5169\u9805\u6578\u64DA",
         side: "right",
         track: "data",
-        width: 600,
+        width: 680,
         params: [
           { key: "title", label: "\u6A19\u984C", type: "text", default: "\u6548\u7387\u5C0D\u6BD4" },
           { key: "leftLabel", label: "\u5DE6\u9805\u540D\u7A31", type: "text", default: "\u50B3\u7D71\u6D41\u7A0B" },
@@ -7562,7 +7562,7 @@
         desc: "\u91D1\u53E5\u6309\u884C\u4EA4\u932F\u6D6E\u73FE\uFF0C\u95DC\u9375\u8A5E\u8457\u8272\uFF0C\u914D\u77ED\u6A19\u5C3A\u7DDA",
         side: "left",
         track: "main",
-        width: 640,
+        width: 740,
         params: [
           { key: "lines", label: "\u91D1\u53E5\uFF08\u6BCF\u884C\u4E00\u53E5\uFF09", type: "textarea", default: "\u597D\u7684\u5DE5\u5177\u4E0D\u8A72\u88AB\u770B\u898B\n\u5B83\u53EA\u662F\u8B93\u60F3\u6CD5\n\u66F4\u5FEB\u843D\u5230\u87A2\u5E55\u4E0A" },
           { key: "highlight", label: "\u9AD8\u4EAE\u8A5E", type: "text", default: "\u60F3\u6CD5" },
@@ -7623,7 +7623,7 @@
         desc: "\u6700\u591A\u56DB\u500B\u300C\u6A19\u7C64:\u6578\u503C\u300D\u683C\u5B50\uFF0C\u6578\u5B57\u4F9D\u6B21\u6EFE\u52D5\u9EDE\u4EAE",
         side: "right",
         track: "data",
-        width: 620,
+        width: 700,
         params: [
           { key: "title", label: "\u6A19\u984C", type: "text", default: "\u751F\u7522\u7DDA\u6210\u7E3E" },
           { key: "stats", label: "\u6578\u64DA\uFF08\u6BCF\u884C \u6A19\u7C64:\u6578\u503C\uFF09", type: "textarea", default: "\u51FA\u7247\u8017\u6642:3\u5C0F\u6642\n\u8FD4\u5DE5\u7387:9%\n\u5361\u7247\u5FA9\u7528:87%\ntoken\u6210\u672C:\xA50.4" },
@@ -7691,7 +7691,7 @@
         desc: "SVG \u5713\u74B0\u63CF\u908A\u751F\u9577 + \u4E2D\u592E\u767E\u5206\u6BD4\u6EFE\u52D5",
         side: "right",
         track: "data",
-        width: 520,
+        width: 620,
         params: [
           { key: "title", label: "\u6A19\u984C", type: "text", default: "\u81EA\u52D5\u5316\u8986\u84CB" },
           { key: "percent", label: "\u767E\u5206\u6BD4", type: "range", min: 0, max: 100, step: 1, default: 76 },
@@ -7771,7 +7771,7 @@
         desc: "\u8A5E\u584A\u6309\u78BA\u5B9A\u6027\u7BC0\u594F\u932F\u843D\u6D6E\u73FE\uFF0C\u91CD\u9EDE\u8A5E\u8457\u8272",
         side: "right",
         track: "support",
-        width: 620,
+        width: 700,
         params: [
           { key: "words", label: "\u95DC\u9375\u5B57\uFF08\u6BCF\u884C\u4E00\u500B\uFF09", type: "textarea", default: "\u865B\u64EC\u6642\u9593\n\u9010\u5E40\u6E32\u67D3\n\u900F\u660E\u901A\u9053\n\u96F6\u8FD4\u5DE5\n\u78BA\u5B9A\u6027\u96A8\u6A5F\n\u6642\u9418\u6821\u6B63" },
           { key: "stepMs", label: "\u7BC0\u594F(ms)", type: "range", min: 60, max: 300, step: 10, default: 130 },
@@ -7837,7 +7837,7 @@
         desc: "\u6A6B\u5411\u8EF8\u7DDA\u751F\u9577\uFF0C\u7BC0\u9EDE\u8207\u6A19\u7C64\u4F9D\u6B21\u9EDE\u4EAE",
         side: "left",
         track: "support",
-        width: 680,
+        width: 780,
         params: [
           { key: "items", label: "\u7BC0\u9EDE\uFF08\u6BCF\u884C\u4E00\u500B\uFF09", type: "textarea", default: "\u5B9A\u98A8\u683C\n\u91CF\u7522\u5361\n\u63A5\u7DE8\u6392\n\u900F\u660E\u5C0E\u51FA\n\u4E00\u9375\u51FA\u7247" },
           { key: "spreadMs", label: "\u5C55\u958B\u6642\u9577(ms)", type: "range", min: 400, max: 2400, step: 50, default: 1200 },
@@ -7894,7 +7894,7 @@
         desc: "\u7DE8\u865F\u884C\u9010\u689D\u5165\u5834\u4E26\u4F9D\u6B21\u6253\u52FE\uFF0C\u9069\u5408\u6D41\u7A0B\u8AAA\u660E",
         side: "right",
         track: "support",
-        width: 600,
+        width: 680,
         params: [
           { key: "items", label: "\u6B65\u9A5F\uFF08\u6BCF\u884C\u4E00\u500B\uFF09", type: "textarea", default: "\u9304\u53E3\u64AD\n\u5C0E\u51FA\u5B57\u5E55 SRT\nAI \u7DE8\u6392\u5361\u7247\n\u9810\u89BD\u5FAE\u8ABF\n\u4E00\u9375\u6E32\u67D3\u6210\u7247" },
           { key: "rowGapMs", label: "\u884C\u9593\u9694(ms)", type: "range", min: 80, max: 400, step: 10, default: 180 },
@@ -7944,7 +7944,7 @@
         desc: "\u7121\u6846\u5927\u5B57 + \u7D30\u7DDA\u5C55\u958B\uFF0C\u58D3\u5F97\u4F4F\u5834\u7684\u89C0\u9EDE\u53E5",
         side: "right",
         track: "main",
-        width: 760,
+        width: 820,
         params: [
           { key: "text", label: "\u6587\u5B57", type: "textarea", default: "\u52D5\u6548\u4E0D\u662F\u52A0\u6CD5\n\u662F\u6E1B\u6CD5" },
           { key: "fontSize", label: "\u5B57\u865F", type: "range", min: 44, max: 104, step: 2, default: 68 },
@@ -8012,7 +8012,7 @@
         desc: "\u7AE0\u7BC0\u5217\u8868\u4F9D\u5E8F\u9EDE\u4EAE\uFF0C\u5E36 TAG \u5FBD\u7AE0\u8207\u5B8C\u6210\u9EDE",
         side: "left",
         track: "support",
-        width: 520,
+        width: 640,
         params: [
           { key: "title", label: "\u6A19\u984C", type: "text", default: "\u672C\u6B21\u6539\u88DD\u6E05\u55AE" },
           { key: "items", label: "\u9805\u76EE\uFF08\u6BCF\u884C TAG|\u6A19\u984C\uFF09", type: "textarea", default: "WHY|\u70BA\u4EC0\u9EBC\u91CD\u505A\u4E00\u689D\u751F\u7522\u7DDA\nOLD|\u820A\u6D41\u7A0B\u7684\u4E09\u500B\u75DB\u9EDE\nNEW|\u65B0\u6D41\u7A0B\u9577\u4EC0\u9EBC\u6A23" },
@@ -8158,21 +8158,33 @@
     const def = getEffect(c.effect);
     const wrapRef = (0, import_react.useRef)(null);
     const [avoid, setAvoid] = (0, import_react.useState)(0);
+    const [scale, setScale] = (0, import_react.useState)(CARD_W_SCALE);
     if (!def) return null;
     const Comp = def.component;
     const width = c.width ?? def.width ?? 560;
     const fullParams = {};
     for (const p of def.params) fullParams[p.key] = c.params?.[p.key] ?? p.default;
     const visible = t >= c.start - 1 && t <= c.end + 300;
-    const measKey = `${c.effect}|${width}|${JSON.stringify(c.params)}|${visible ? 1 : 0}`;
+    const measKey = `${c.effect}|${width}|${JSON.stringify(c.params)}|${visible ? 1 : 0}|${scale.toFixed(2)}`;
     (0, import_react.useLayoutEffect)(() => {
       if (!visible) return;
       const inner = wrapRef.current;
       if (!inner) return;
       const rect = inner.getBoundingClientRect();
       if (rect.height <= 0) return;
-      const centerY2 = CENTER_Y + (c.offsetY ?? 0) - avoid;
-      const bottom = centerY2 + rect.height / 2;
+      const innerH = rect.height / scale;
+      const centerYraw = CENTER_Y + (c.offsetY ?? 0);
+      const capH = Math.min(
+        (SUBTITLE_TOP - TOP_LIMIT) / innerH,
+        2 * (centerYraw - TOP_LIMIT) / innerH,
+        2 * (SUBTITLE_TOP - centerYraw) / innerH
+      );
+      const want = Math.max(CARD_SCALE_MIN, Math.min(CARD_W_SCALE, capH));
+      if (Math.abs(want - scale) > 0.01) {
+        setScale(want);
+        return;
+      }
+      const bottom = centerYraw - avoid + innerH * scale / 2;
       const over = bottom - SUBTITLE_TOP;
       if (over > 0) setAvoid((a) => a + over);
     }, [measKey]);
@@ -8187,10 +8199,10 @@
             top: centerY,
             transform: "translateY(-50%)",
             [c.side === "left" ? "left" : "right"]: SIDE_MARGIN,
-            width: width * CARD_W_SCALE,
+            width: width * scale,
             zIndex: 10
           },
-          children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { ref: wrapRef, style: { width, zoom: CARD_W_SCALE }, children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Comp, { t, enterAt: c.start, exitAt: c.end, params: fullParams }) })
+          children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { ref: wrapRef, style: { width, zoom: scale }, children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Comp, { t, enterAt: c.start, exitAt: c.end, params: fullParams }) })
         }
       )
     );
@@ -8233,7 +8245,7 @@
       }
     );
   }
-  var import_react, import_jsx_runtime12, IS_EXPORT, STAGE_W, STAGE_H, SIDE_MARGIN, CARD_W_SCALE, CENTER_Y, SUBTITLE_TOP, SEG_LEFT, SEG_TOP, clamp01_, progP;
+  var import_react, import_jsx_runtime12, IS_EXPORT, STAGE_W, STAGE_H, SIDE_MARGIN, CARD_W_SCALE, CARD_SCALE_MIN, TOP_LIMIT, CENTER_Y, SUBTITLE_TOP, SEG_LEFT, SEG_TOP, clamp01_, progP;
   var init_Stage = __esm({
     "src/stage/Stage.tsx"() {
       import_react = __toESM(require_react());
@@ -8244,7 +8256,9 @@
       STAGE_W = 1080;
       STAGE_H = 1920;
       SIDE_MARGIN = 44;
-      CARD_W_SCALE = 0.72;
+      CARD_W_SCALE = 0.92;
+      CARD_SCALE_MIN = 0.5;
+      TOP_LIMIT = 12;
       CENTER_Y = STAGE_H / 2;
       SUBTITLE_TOP = STAGE_H - 220;
       SEG_LEFT = 48;

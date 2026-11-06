@@ -46,7 +46,7 @@ export const progressRing: EffectDef = {
   desc: 'SVG 圓環描邊生長 + 中央百分比滾動',
   side: 'right',
   track: 'data',
-  width: 520,
+  width: 620,
   params: [
     { key: 'title', label: '標題', type: 'text', default: '自動化覆蓋' },
     { key: 'percent', label: '百分比', type: 'range', min: 0, max: 100, step: 1, default: 76 },

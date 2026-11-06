@@ -51,7 +51,7 @@ export const timelineMilestones: EffectDef = {
   desc: '橫向軸線生長，節點與標籤依次點亮',
   side: 'left',
   track: 'support',
-  width: 680,
+  width: 780,
   params: [
     { key: 'items', label: '節點（每行一個）', type: 'textarea', default: '定風格\n量產卡\n接編排\n透明導出\n一鍵出片' },
     { key: 'spreadMs', label: '展開時長(ms)', type: 'range', min: 400, max: 2400, step: 50, default: 1200 },

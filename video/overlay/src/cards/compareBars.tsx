@@ -46,7 +46,7 @@ export const compareBars: EffectDef = {
   desc: '兩條橫向進度條先後生長，直觀對比兩項數據',
   side: 'right',
   track: 'data',
-  width: 600,
+  width: 680,
   params: [
     { key: 'title', label: '標題', type: 'text', default: '效率對比' },
     { key: 'leftLabel', label: '左項名稱', type: 'text', default: '傳統流程' },

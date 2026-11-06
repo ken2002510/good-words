@@ -225,7 +225,10 @@ def main() -> int:
     f.append(f"[bg][demoT]overlay=0:0:eof_action=pass[v1]")
 
     # 字卡疊加（淡入淡出）。卡窗 = timeline 推導（見 card_windows）。
+    # 注意：字卡的「合成」刻意排到 overlay 之後（見下方 pending_cards），
+    # 這樣收尾網址卡不會被 overlay 段內的 40% dim 壓暗（字卡本身仍在此定義）。
     cur = "v1"
+    pending_cards: list[tuple[str, float, float]] = []
     for i, name in enumerate(png_cards):
         a, b = wins[name]
         a = max(0.0, a)
@@ -237,8 +240,9 @@ def main() -> int:
             continue
         idx = IDX_CARD0 + i
         tag = f"c{i}"
-        # 靜態字卡壓到低 alpha（尾卡較亮）：背景現在是生成圖，避免和 overlay 動態字卡的文字重疊
-        card_aa = 0.55 if is_last else 0.12
+        # 靜態字卡：除了收尾網址卡，其餘**完全不出現**（alpha=0）。
+        # 背景已是生成的 Flow 圖，任何背景文字都會和 overlay 動態字卡重複（使用者反映的「後面的字」）。
+        card_aa = 0.95 if is_last else 0.0
         # 淡入／淡出必須寫在 setpts 位移「之後」，且 st 用**絕對秒數**：
         # setpts=PTS-STARTPTS+a/TB 之後，串流的 pts 已是絕對時間（a+k/25），
         # 所以 fade=t=in 用 st=a、fade=t=out 用 st=b-0.6。
@@ -254,10 +258,9 @@ def main() -> int:
             f"{fade_in}{fade_out}"
             f"null[{tag}]"
         )
-        f.append(f"[{cur}][{tag}]overlay=0:0:eof_action=pass:enable='between(t,{a:.3f},{b:.3f})'[v{tag}]")
-        cur = f"v{tag}"
+        pending_cards.append((tag, a, b))
 
-    # ---- seg5 截圖疊加（在字卡之上；scale=contain 到 1080x1920，底色 pad）----
+    # ---- seg5 截圖疊加（scale=contain 到 1080x1920，底色 pad）----
     for j, (nm, a, b) in enumerate(shot_wins):
         idx = IDX_SHOT0 + j
         tag = f"s{j}"
@@ -285,6 +288,11 @@ def main() -> int:
     )
     f.append(f"[{cur}][ovl]overlay=0:0:eof_action=pass[v_ovl]")
     cur = "v_ovl"
+
+    # ---- 字卡合成放在 overlay 之後：收尾網址卡不會被 dim 壓暗（其餘卡 alpha=0）----
+    for tag, a, b in pending_cards:
+        f.append(f"[{cur}][{tag}]overlay=0:0:eof_action=pass:enable='between(t,{a:.3f},{b:.3f})'[v{tag}]")
+        cur = f"v{tag}"
 
     # 字幕：固定在最底部的專屬橫帶（永遠最後疊），並加一層半透明底，
     # 避免和字卡的文字重疊（先前抽幀看到字幕蓋在字卡文字上）。

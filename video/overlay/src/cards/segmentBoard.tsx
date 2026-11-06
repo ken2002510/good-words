@@ -55,7 +55,7 @@ export const segmentBoard: EffectDef = {
   desc: '章節列表依序點亮，帶 TAG 徽章與完成點',
   side: 'left',
   track: 'support',
-  width: 520,
+  width: 640,
   params: [
     { key: 'title', label: '標題', type: 'text', default: '本次改裝清單' },
     { key: 'items', label: '項目（每行 TAG|標題）', type: 'textarea', default: 'WHY|為什麼重做一條生產線\nOLD|舊流程的三個痛點\nNEW|新流程長什麼樣' },

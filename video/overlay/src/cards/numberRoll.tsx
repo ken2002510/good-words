@@ -35,7 +35,7 @@ export const numberRoll: EffectDef = {
   desc: '大號數字從零滾動到目標值，配標題與備註',
   side: 'left',
   track: 'data',
-  width: 560,
+  width: 640,
   params: [
     { key: 'title', label: '標題', type: 'text', default: '出片耗時' },
     { key: 'value', label: '目標數值', type: 'number', default: 3 },

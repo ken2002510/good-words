@@ -49,7 +49,7 @@ export const statBoard: EffectDef = {
   desc: '最多四個「標籤:數值」格子，數字依次滾動點亮',
   side: 'right',
   track: 'data',
-  width: 620,
+  width: 700,
   params: [
     { key: 'title', label: '標題', type: 'text', default: '生產線成績' },
     { key: 'stats', label: '數據（每行 標籤:數值）', type: 'textarea', default: '出片耗時:3小時\n返工率:9%\n卡片復用:87%\ntoken成本:¥0.4' },

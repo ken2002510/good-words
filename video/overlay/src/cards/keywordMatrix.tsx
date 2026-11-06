@@ -50,7 +50,7 @@ export const keywordMatrix: EffectDef = {
   desc: '詞塊按確定性節奏錯落浮現，重點詞著色',
   side: 'right',
   track: 'support',
-  width: 620,
+  width: 700,
   params: [
     { key: 'words', label: '關鍵字（每行一個）', type: 'textarea', default: '虛擬時間\n逐幀渲染\n透明通道\n零返工\n確定性隨機\n時鐘校正' },
     { key: 'stepMs', label: '節奏(ms)', type: 'range', min: 60, max: 300, step: 10, default: 130 },

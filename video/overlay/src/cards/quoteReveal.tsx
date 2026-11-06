@@ -52,7 +52,7 @@ export const quoteReveal: EffectDef = {
   desc: '金句按行交錯浮現，關鍵詞著色，配短標尺線',
   side: 'left',
   track: 'main',
-  width: 640,
+  width: 740,
   params: [
     { key: 'lines', label: '金句（每行一句）', type: 'textarea', default: '好的工具不該被看見\n它只是讓想法\n更快落到螢幕上' },
     { key: 'highlight', label: '高亮詞', type: 'text', default: '想法' },

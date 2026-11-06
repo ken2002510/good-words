@@ -45,7 +45,7 @@ export const stepChecklist: EffectDef = {
   desc: '編號行逐條入場並依次打勾，適合流程說明',
   side: 'right',
   track: 'support',
-  width: 600,
+  width: 680,
   params: [
     { key: 'items', label: '步驟（每行一個）', type: 'textarea', default: '錄口播\n導出字幕 SRT\nAI 編排卡片\n預覽微調\n一鍵渲染成片' },
     { key: 'rowGapMs', label: '行間隔(ms)', type: 'range', min: 80, max: 400, step: 10, default: 180 },

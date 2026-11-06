@@ -217,14 +217,19 @@ def card_tech() -> Image.Image:
 
 
 def card_end() -> Image.Image:
-    img, d = base_card()
-    d.text((100, 640), "好好說話", font=font(150, bold=True), fill=CREAM)
-    d.text((104, 850), "先對自己說一句，", font=font(56), fill=MUTED)
-    d.text((104, 930), "再把這句話送給別人。", font=font(56), fill=GOLD)
+    """收尾「網址卡」：**透明底**、只有一個小面板（不遮生成背景、不與 overlay 金句卡重複文字）。
 
-    d.line([(104, 1100), (104 + 300, 1100)], fill=GOLD, width=5)
-    d.text((104, 1180), "good-words.vercel.app", font=font(52, bold=True), fill=GOLD)
-    d.text((104, 1270), "免登入 · 不上傳 · 手機優先", font=font(38), fill=MUTED)
+    舊版是滿版漸層 + 大字「好好說話」，會蓋掉生圖背景、又和 overlay c19 金句卡同一句話；
+    改成只留網址與一句規格說明，放畫面下方（y 1430-1690，避開字幕帶 1700+）。
+    """
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    x0, y0, x1, y1 = 90, 1430, 990, 1690
+    d.rounded_rectangle([x0, y0, x1, y1], radius=36, fill=(16, 13, 11, 205),
+                        outline=(232, 179, 106, 150), width=3)
+    d.line([(x0 + 44, y0 + 62), (x0 + 44 + 300, y0 + 62)], fill=(232, 179, 106, 255), width=5)
+    d.text((x0 + 44, y0 + 92), "good-words.vercel.app", font=font(62, bold=True), fill=(232, 179, 106, 255))
+    d.text((x0 + 44, y0 + 178), "免登入 · 不上傳 · 手機優先", font=font(40), fill=(214, 200, 186, 255))
     return img
 
 

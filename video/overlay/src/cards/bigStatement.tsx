@@ -35,7 +35,7 @@ export const bigStatement: EffectDef = {
   desc: '無框大字 + 細線展開，壓得住場的觀點句',
   side: 'right',
   track: 'main',
-  width: 760,
+  width: 820,
   params: [
     { key: 'text', label: '文字', type: 'textarea', default: '動效不是加法\n是減法' },
     { key: 'fontSize', label: '字號', type: 'range', min: 44, max: 104, step: 2, default: 68 },

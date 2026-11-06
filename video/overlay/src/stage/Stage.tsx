@@ -11,7 +11,9 @@ const IS_EXPORT =
 export const STAGE_W = 1080
 export const STAGE_H = 1920
 const SIDE_MARGIN = 44          // 側邊距 90 -> 44px
-const CARD_W_SCALE = 0.72       // 卡寬 x0.72（zoom 縮放，字級跟著縮；0.56 時小字太小）
+const CARD_W_SCALE = 0.92       // 卡寬 x0.92（zoom 縮放，字級跟著縮；太小會被說「窗格太小」）
+const CARD_SCALE_MIN = 0.5      // 高度塞不下時的下限（demo 段卡片才可能吃到）
+const TOP_LIMIT = 12            // 卡片上緣最小留白，避免被切頂
 const CENTER_Y = STAGE_H / 2    // 卡片垂直置中 y=960
 const SUBTITLE_TOP = STAGE_H - 220  // 底部 220px 字幕帶，y>=1700 禁入
 const SEG_LEFT = 48             // 段頭板移到左上
@@ -108,6 +110,7 @@ function CardSlot({ c, t }: { c: CardInstance; t: number }) {
   const def = getEffect(c.effect)
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const [avoid, setAvoid] = useState(0)
+  const [scale, setScale] = useState(CARD_W_SCALE)
   if (!def) return null
   const Comp = def.component
   const width = c.width ?? def.width ?? 560
@@ -115,15 +118,29 @@ function CardSlot({ c, t }: { c: CardInstance; t: number }) {
   for (const p of def.params) fullParams[p.key] = c.params?.[p.key] ?? p.default
 
   const visible = t >= c.start - 1 && t <= c.end + 300
-  const measKey = `${c.effect}|${width}|${JSON.stringify(c.params)}|${visible ? 1 : 0}`
+  const measKey = `${c.effect}|${width}|${JSON.stringify(c.params)}|${visible ? 1 : 0}|${scale.toFixed(2)}`
   useLayoutEffect(() => {
     if (!visible) return
     const inner = wrapRef.current
     if (!inner) return
     const rect = inner.getBoundingClientRect()
     if (rect.height <= 0) return
-    const centerY = CENTER_Y + (c.offsetY ?? 0) - avoid
-    const bottom = centerY + rect.height / 2
+    const innerH = rect.height / scale          // 未縮放高度
+    const centerYraw = CENTER_Y + (c.offsetY ?? 0)
+    // 高度自適應：卡片必須塞得進「上緣留白」與「字幕帶上方」之間。
+    // demo 段卡片中心在 y=400（上方），這條限制會自動縮小過高的卡，不會切頂。
+    const capH = Math.min(
+      (SUBTITLE_TOP - TOP_LIMIT) / innerH,
+      (2 * (centerYraw - TOP_LIMIT)) / innerH,
+      (2 * (SUBTITLE_TOP - centerYraw)) / innerH,
+    )
+    const want = Math.max(CARD_SCALE_MIN, Math.min(CARD_W_SCALE, capH))
+    if (Math.abs(want - scale) > 0.01) {
+      setScale(want)
+      return
+    }
+    // 位置微調（保險）：底部仍在字幕帶之上
+    const bottom = centerYraw - avoid + (innerH * scale) / 2
     const over = bottom - SUBTITLE_TOP
     if (over > 0) setAvoid((a) => a + over)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -138,12 +155,12 @@ function CardSlot({ c, t }: { c: CardInstance; t: number }) {
         top: centerY,
         transform: 'translateY(-50%)',
         [c.side === 'left' ? 'left' : 'right']: SIDE_MARGIN,
-        width: width * CARD_W_SCALE,
+        width: width * scale,
         zIndex: 10,
       }}
     >
-      {/* 內層：zoom 0.56 → 卡寬 = def.width x0.56，字級跟著縮 */}
-      <div ref={wrapRef} style={{ width, zoom: CARD_W_SCALE }}>
+      {/* 內層：zoom scale（預設 0.92）→ 卡寬 = def.width x scale，字級跟著縮 */}
+      <div ref={wrapRef} style={{ width, zoom: scale }}>
         <Comp t={t} enterAt={c.start} exitAt={c.end} params={fullParams} />
       </div>
     </div>
