@@ -32,20 +32,22 @@ TIMELINE = VIDEO / "assets" / "audio" / "timeline.json"
 OUT_JSON = HERE / "overlay.json"
 SRC_JSON = HERE / "src" / "overlay.json"
 
+CARD_W = 860          # 一般段落卡寬（畫面 73%；左右一致＝視覺平衡）
+CARD_W_DEMO = 780     # demo 段卡寬（讓真實網站畫面仍看得見）
 HEAD_MS = 1200          # 成片 head_pad（= assemble.py head_pad）
 INSET_MS = 150          # 卡窗內縮
 DEMO_OFFSET_Y = -560    # demo 段卡片上移
-DEMO_DIM = 0.12
+DEMO_DIM = 0.04   # demo 段幾乎不壓暗：真實網站畫面要清楚（評審要看得出是真的在用）
 NORMAL_DIM = 0.40
 
 # ---------------------------------------------------------------- 19 段編排
 # key = timeline idx；value = list of card specs（一個 run 安排多張卡時依序平分 run 視窗）
 PLAN: dict[int, list[dict]] = {
     1: [dict(effect="big-statement", side="left", params=dict(
-        text="搞砸了，第一個念頭是\n「我怎麼這麼沒用」", fontSize=76, color="accent"))],
+        text="搞砸了，第一個念頭是\n「我怎麼這麼沒用」", fontSize=86, color="accent"))],
     2: [dict(effect="quote-reveal", side="right", params=dict(
         lines="換成別人對你說\n你早就生氣了\n對自己說，卻覺得理所當然",
-        highlight="生氣", fontSize=48, color="special"))],
+        highlight="生氣", fontSize=58, color="special"))],
     3: [dict(effect="timeline-milestones", side="left", params=dict(
         items="打進心事\n接住情緒\n給你一句好話", color="support", spreadMs=1400))],
     4: [dict(effect="stat-board", side="right", params=dict(
@@ -57,7 +59,7 @@ PLAN: dict[int, list[dict]] = {
         footnote="也不假裝你的困難不存在"))],
     # ---- demo 段（seg3/seg4）：offsetY 上移、dim 0.12 ----
     6: [dict(effect="big-statement", side="right", params=dict(
-        text="這是真實的網站畫面\n不是簡報", fontSize=56, color="support"))],
+        text="這是真實的網站畫面\n不是簡報", fontSize=66, color="support"))],
     7: [dict(effect="progress-ring", side="left", params=dict(
         title="心事已送出", percent=100, durMs=900,
         label="不用修飾", sublabel="直接打出來", color="data"))],
@@ -68,7 +70,7 @@ PLAN: dict[int, list[dict]] = {
         items="① 承接\n用它的話，把處境說一次", doneColor="special"))],
     10: [dict(effect="quote-reveal", side="right", params=dict(
         lines="② 好話\n「我聽見你為自己講話的\n每一秒都認真」",
-        highlight="認真", fontSize=44, color="accent"))],
+        highlight="認真", fontSize=54, color="accent"))],
     11: [dict(effect="step-checklist", side="left", params=dict(
         items="③ 小步\n今晚就能做的一件小事", doneColor="data"))],
     12: [dict(effect="keyword-matrix", side="right", params=dict(
@@ -82,7 +84,7 @@ PLAN: dict[int, list[dict]] = {
         title="收藏清單",
         stats="存在:你的瀏覽器\n登入:不用\n上傳:不會\n帳號:不綁", color="data"))],
     15: [dict(effect="big-statement", side="left", params=dict(
-        text="危機訊號\n立刻給求助資源", fontSize=60, color="special"))],
+        text="危機訊號\n立刻給求助資源", fontSize=70, color="special"))],
     16: [dict(effect="stat-board", side="right", params=dict(
         title="求助資源",
         stats="1925:安心專線\n1995:生命線\n1980:張老師\n底線:AI 不當諮商師", color="special"))],
@@ -105,17 +107,19 @@ PLAN: dict[int, list[dict]] = {
     ],
     19: [dict(effect="quote-reveal", side="right", params=dict(
         lines="好好說話\n先對自己說一句\n再把它送給別人",
-        highlight="好好說話", fontSize=52, color="accent"))],
+        highlight="好好說話", fontSize=62, color="accent"))],
 }
 
 # 段頭板（segs[]）：依 timeline 的 seg 欄位分組，標題/標籤/色固定，時間由段邊界推導
+# 段頭板標題：刻意改成**短標籤**，不要和旁白字幕／卡片寫同一句話
+# （實測 seg1 段頭「最不會說好話的對象」與字幕「我們最不會說好話的對象…」完全重複）
 SEG_META = {
-    1: ("PROBLEM", "最不會說好話的對象", "accent"),
-    2: ("INTRO", "《好好說話》是什麼", "support"),
-    3: ("LIVE DEMO", "真實操作一次", "data"),
-    4: ("SAFETY", "護欄與底線", "special"),
-    5: ("WALL", "好話牆怎麼玩", "accent"),
-    6: ("END", "先對自己說一句", "special"),
+    1: ("PROBLEM", "痛點", "accent"),
+    2: ("INTRO", "作品登場", "support"),
+    3: ("LIVE DEMO", "操作示範", "data"),
+    4: ("SAFETY", "安全底線", "special"),
+    5: ("WALL", "參與方式", "accent"),
+    6: ("END", "結語", "special"),
 }
 
 
@@ -174,6 +178,9 @@ def build() -> dict:
                 "end": end_ms,
                 "side": spec["side"],
                 "params": spec["params"],
+                # 統一卡寬（約畫面 73%/66%）：左右兩側寬度一致才平衡；
+                # demo 段略窄，保留真實網站畫面可見面積。
+                "width": CARD_W_DEMO if is_demo else CARD_W,
             }
             if is_demo:
                 card["offsetY"] = DEMO_OFFSET_Y

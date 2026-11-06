@@ -12,7 +12,7 @@ function CompareBars({ t, enterAt, exitAt, params }: any) {
   const rowB = clamp01(prog(t, enterAt + 220, 360)) * fade
   const Row = ({ label, val, color, alpha }: any) => (
     <div style={{ opacity: alpha }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 28, marginBottom: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 36, marginBottom: 8 }}>
         <span style={{ color: 'var(--c-text)' }}>{label}</span>
         <span className="fx-num" style={{ color: `var(--c-${color})` }}>{Math.round(val * p * 100)}%</span>
       </div>
@@ -33,7 +33,7 @@ function CompareBars({ t, enterAt, exitAt, params }: any) {
         <Row label={params.rightLabel} val={rv} color={params.rightColor} alpha={rowB} />
       </div>
       {params.footnote ? (
-        <div style={{ marginTop: 24, fontSize: 22, color: 'var(--c-muted)', opacity: fade }}>{params.footnote}</div>
+        <div style={{ marginTop: 24, fontSize: 28, color: 'var(--c-muted)', opacity: fade }}>{params.footnote}</div>
       ) : null}
     </CardShell>
   )

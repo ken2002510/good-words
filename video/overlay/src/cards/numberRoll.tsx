@@ -13,7 +13,7 @@ function NumberRoll({ t, enterAt, exitAt, params }: any) {
       <CardTitle text={params.title} />
       <div style={{ opacity: fade }}>
         <div className="fx-num" style={{
-          fontSize: 92, fontWeight: 750, lineHeight: 1.1,
+          fontSize: 108, fontWeight: 750, lineHeight: 1.1,
           color: `var(--c-${params.color})`, letterSpacing: '1px',
         }}>
           {params.prefix}
@@ -21,7 +21,7 @@ function NumberRoll({ t, enterAt, exitAt, params }: any) {
           {params.suffix}
         </div>
         {params.caption ? (
-          <div style={{ fontSize: 26, color: 'var(--c-muted)', marginTop: 10 }}>{params.caption}</div>
+          <div style={{ fontSize: 34, color: 'var(--c-muted)', marginTop: 10 }}>{params.caption}</div>
         ) : null}
       </div>
     </CardShell>

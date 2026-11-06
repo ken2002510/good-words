@@ -24,12 +24,12 @@ function StepChecklist({ t, enterAt, exitAt, params }: any) {
                 border: `1.5px solid ${doneP > 0.5 ? `var(--c-${params.doneColor})` : 'var(--card-line)'}`,
                 background: doneP > 0.5 ? `color-mix(in srgb, var(--c-${params.doneColor}) 16%, transparent)` : 'transparent',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 26, fontWeight: 650,
+                fontSize: 32, fontWeight: 650,
                 color: doneP > 0.5 ? `var(--c-${params.doneColor})` : 'var(--c-muted)',
               }}>
                 {doneP > 0.5 ? '✓' : String(i + 1)}
               </div>
-              <div style={{ fontSize: 32, color: 'var(--c-text)' }}>{txt}</div>
+              <div style={{ fontSize: 42, color: 'var(--c-text)' }}>{txt}</div>
             </div>
           )
         })}

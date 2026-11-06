@@ -11,7 +11,7 @@ function BigStatement({ t, enterAt, exitAt, params }: any) {
   return (
     <CardShell t={t} enterAt={enterAt} exitAt={exitAt} style={{ padding: '10px 6px' }}>
       <div style={{
-        fontSize: Number(params.fontSize ?? 68), fontWeight: 650,
+        fontSize: Number(params.fontSize ?? 78), fontWeight: 650,
         lineHeight: 1.35, letterSpacing: '1px',
         color: `var(--c-${params.color})`,
         opacity: a,

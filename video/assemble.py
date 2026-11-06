@@ -209,10 +209,17 @@ def main() -> int:
         cmd += ["-loop", "1", "-t", f"{total + 5.0:.3f}", "-i", str(p)]
     # 動態疊卡（ProRes 4444，帶 alpha）
     cmd += ["-i", str(overlay_mp4)]
+    # 字幕用底部漸層遮罩（取代硬邊黑條；上緣柔和淡入）
+    grad_png = CARDS / "subtitle_gradient.png"
+    if not grad_png.exists():
+        print(f"!! 缺 {grad_png} —— 請先跑 make_sub_gradient.py")
+        return 3
+    cmd += ["-loop", "1", "-t", f"{total + 5.0:.3f}", "-i", str(grad_png)]
 
     IDX_CARD0 = 3
     IDX_SHOT0 = IDX_CARD0 + len(card_files)
     IDX_OVL = IDX_SHOT0 + len(shot_paths)
+    IDX_GRAD = IDX_OVL + 1
 
     # ---- filter ----
     # demo 畫面：scale+crop 填滿 1080x1920
@@ -300,19 +307,17 @@ def main() -> int:
     shifted = AUDIO / "subtitles_shifted.srt"
     _shift_srt(srt, shifted, head_pad)
     esc = str(shifted).replace("\\", "/").replace(":", "\\:")
-    band_h = 220                          # 字幕橫帶高度（y=1700..1920 安全區）
-    band_y = H - band_h
-    f.append(
-        f"[{cur}]drawbox=x=0:y={band_y}:w={W}:h={band_h}:"
-        f"color=0x120E0C@0.55:t=fill[vband]"
-    )
-    # v4：字號縮小（19→16）、上移（MarginV 3→12），避免「太大又太下面」；
-    # 實測 FontSize=15/MarginV=34 會浮在帶上方，此組合讓兩行落在 y≈1700-1830
+    # 字幕底：漸層遮罩（y 1560..1920，上緣 alpha 0→100→205）而非硬邊 drawbox，
+    # 避免在 demo 白底畫面上出現一條突兀黑條（實測落差 93/255）。
+    grad_h = 360
+    f.append(f"[{IDX_GRAD}:v]format=rgba,trim=0:{total:.3f},setpts=PTS-STARTPTS[grad]")
+    f.append(f"[{cur}][grad]overlay=0:{H - grad_h}:eof_action=pass[vband]")
+    # v7：字號 16→17（行高 ~74px）、維持 MarginV=12（底緣留白 ~97px）
     f.append(
         f"[vband]subtitles='{esc}':"
-        f"force_style='FontName=Microsoft JhengHei,FontSize=16,"
+        f"force_style='FontName=Microsoft JhengHei,FontSize=17,"
         f"PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1,"
-        f"Outline=1,Shadow=1,Alignment=2,MarginV=12'[vsub]"
+        f"Outline=2,Shadow=1,Alignment=2,MarginV=12'[vsub]"
     )
     # 色彩範圍正規化：bg 圖源是 full-range，統一壓成 limited tv，避免 yuvj420p
     f.append("[vsub]scale=in_range=auto:out_range=tv,format=yuv420p,setsar=1[vout]")

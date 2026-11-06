@@ -30,8 +30,8 @@ function StatBoard({ t, enterAt, exitAt, params }: any) {
               borderRadius: 16,
               padding: '16px 20px',
             }}>
-              <div style={{ fontSize: 22, color: 'var(--c-muted)', marginBottom: 6 }}>{label}</div>
-              <div className="fx-num" style={{ fontSize: 60, fontWeight: 700, color: `var(--c-${params.color})` }}>
+              <div style={{ fontSize: 28, color: 'var(--c-muted)', marginBottom: 6 }}>{label}</div>
+              <div className="fx-num" style={{ fontSize: 74, fontWeight: 700, color: `var(--c-${params.color})` }}>
                 {pre}{m ? countUp(t, enterAt + i * 160, num, 1100).toFixed(dec) : ''}{suf}
               </div>
             </div>

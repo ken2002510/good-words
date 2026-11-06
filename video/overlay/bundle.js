@@ -7411,7 +7411,7 @@
       /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CardTitle, { text: params.title }),
       /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: { opacity: fade }, children: [
         /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "fx-num", style: {
-          fontSize: 92,
+          fontSize: 108,
           fontWeight: 750,
           lineHeight: 1.1,
           color: `var(--c-${params.color})`,
@@ -7421,7 +7421,7 @@
           countUp(t, enterAt + 150, val, Number(params.durMs ?? 1200)).toFixed(dec),
           params.suffix
         ] }),
-        params.caption ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: { fontSize: 26, color: "var(--c-muted)", marginTop: 10 }, children: params.caption }) : null
+        params.caption ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: { fontSize: 34, color: "var(--c-muted)", marginTop: 10 }, children: params.caption }) : null
       ] })
     ] });
   }
@@ -7463,7 +7463,7 @@
     const rowA = clamp01(prog(t, enterAt + 60, 360)) * fade;
     const rowB = clamp01(prog(t, enterAt + 220, 360)) * fade;
     const Row = ({ label, val, color, alpha }) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: { opacity: alpha }, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 28, marginBottom: 8 }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 36, marginBottom: 8 }, children: [
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: { color: "var(--c-text)" }, children: label }),
         /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { className: "fx-num", style: { color: `var(--c-${color})` }, children: [
           Math.round(val * p * 100),
@@ -7484,7 +7484,7 @@
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Row, { label: params.leftLabel, val: lv, color: params.leftColor, alpha: rowA }),
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Row, { label: params.rightLabel, val: rv, color: params.rightColor, alpha: rowB })
       ] }),
-      params.footnote ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: { marginTop: 24, fontSize: 22, color: "var(--c-muted)", opacity: fade }, children: params.footnote }) : null
+      params.footnote ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: { marginTop: 24, fontSize: 28, color: "var(--c-muted)", opacity: fade }, children: params.footnote }) : null
     ] });
   }
   var import_jsx_runtime3, compareBars;
@@ -7538,7 +7538,7 @@
         return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: {
           opacity: a,
           transform: `translateY(${rise}px)`,
-          fontSize: Number(params.fontSize ?? 52),
+          fontSize: Number(params.fontSize ?? 62),
           fontWeight: 650,
           lineHeight: 1.42,
           letterSpacing: "0.5px",
@@ -7600,8 +7600,8 @@
           borderRadius: 16,
           padding: "16px 20px"
         }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { fontSize: 22, color: "var(--c-muted)", marginBottom: 6 }, children: label }),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "fx-num", style: { fontSize: 60, fontWeight: 700, color: `var(--c-${params.color})` }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { fontSize: 28, color: "var(--c-muted)", marginBottom: 6 }, children: label }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "fx-num", style: { fontSize: 74, fontWeight: 700, color: `var(--c-${params.color})` }, children: [
             pre,
             m ? countUp(t, enterAt + i * 160, num, 1100).toFixed(dec) : "",
             suf
@@ -7662,12 +7662,12 @@
           )
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "fx-num", style: { fontSize: 58, fontWeight: 700, color: `var(--c-${params.color})` }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "fx-num", style: { fontSize: 68, fontWeight: 700, color: `var(--c-${params.color})` }, children: [
             countUp(t, enterAt + 150, pct * 100, Number(params.durMs ?? 1300)).toFixed(0),
             "%"
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: { fontSize: 26, color: "var(--c-muted)", marginTop: 6 }, children: params.label }),
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "fx-num", style: { fontSize: 20, color: "var(--c-muted)", marginTop: 14, opacity: clamp01(prog(t, enterAt + 1200, 400)) }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: { fontSize: 32, color: "var(--c-muted)", marginTop: 6 }, children: params.label }),
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "fx-num", style: { fontSize: 26, color: "var(--c-muted)", marginTop: 14, opacity: clamp01(prog(t, enterAt + 1200, 400)) }, children: [
             shown,
             "% \xB7 ",
             params.sublabel
@@ -7749,12 +7749,12 @@
           borderRadius: 999,
           border: `1px solid ${hot ? `var(--c-${params.color})` : "var(--card-line)"}`,
           background: hot ? `color-mix(in srgb, var(--c-${params.color}) 14%, transparent)` : "transparent",
-          fontSize: 32,
+          fontSize: 42,
           fontWeight: hot ? 650 : 450,
           color: hot ? `var(--c-${params.color})` : "var(--c-muted)"
         }, children: w }, i);
       }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { style: { marginTop: 20, fontSize: 20, letterSpacing: 3, color: "var(--c-muted)", opacity: fade * clamp01(prog(t, enterAt + 500, 500)) }, children: params.tagline ?? "" })
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { style: { marginTop: 20, fontSize: 26, letterSpacing: 3, color: "var(--c-muted)", opacity: fade * clamp01(prog(t, enterAt + 500, 500)) }, children: params.tagline ?? "" })
     ] });
   }
   var import_jsx_runtime7, keywordMatrix;
@@ -7819,7 +7819,7 @@
             border: `2px solid var(--c-${params.color})`,
             background: `color-mix(in srgb, var(--c-${params.color}) ${Math.round(p * 85)}%, transparent)`
           } }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { fontSize: 26, color: "var(--c-text)", textAlign: "center", lineHeight: 1.35 }, children: label })
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { fontSize: 34, color: "var(--c-text)", textAlign: "center", lineHeight: 1.35 }, children: label })
         ] }, i);
       }) })
     ] }) });
@@ -7873,11 +7873,11 @@
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: 26,
+          fontSize: 32,
           fontWeight: 650,
           color: doneP > 0.5 ? `var(--c-${params.doneColor})` : "var(--c-muted)"
         }, children: doneP > 0.5 ? "\u2713" : String(i + 1) }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { style: { fontSize: 32, color: "var(--c-text)" }, children: txt })
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { style: { fontSize: 42, color: "var(--c-text)" }, children: txt })
       ] }, i);
     }) }) });
   }
@@ -7914,7 +7914,7 @@
     const lineP = easeOutCubic(prog(t, enterAt + 260, 700));
     return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(CardShell, { t, enterAt, exitAt, style: { padding: "10px 6px" }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { style: {
-        fontSize: Number(params.fontSize ?? 68),
+        fontSize: Number(params.fontSize ?? 78),
         fontWeight: 650,
         lineHeight: 1.35,
         letterSpacing: "1px",
@@ -7977,7 +7977,7 @@
           transform: `translateX(${(1 - eased) * -16}px)`
         }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { style: {
-            fontSize: 15,
+            fontSize: 20,
             fontWeight: 700,
             letterSpacing: 1.5,
             padding: "3px 8px",
@@ -7986,7 +7986,7 @@
             color: `var(--c-${params.color})`,
             opacity: lit ? 1 : 0.35
           }, children: it.tag || "\xB7" }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { style: { fontSize: 24, fontWeight: 600, color: "var(--c-text)" }, children: it.title }),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { style: { fontSize: 32, fontWeight: 600, color: "var(--c-text)" }, children: it.title }),
           /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { style: {
             marginLeft: "auto",
             width: 7,
@@ -8356,7 +8356,7 @@
         segs: [
           {
             id: "seg-1",
-            title: "\u6700\u4E0D\u6703\u8AAA\u597D\u8A71\u7684\u5C0D\u8C61",
+            title: "\u75DB\u9EDE",
             tag: "PROBLEM",
             color: "accent",
             start: 1200,
@@ -8365,7 +8365,7 @@
           },
           {
             id: "seg-2",
-            title: "\u300A\u597D\u597D\u8AAA\u8A71\u300B\u662F\u4EC0\u9EBC",
+            title: "\u4F5C\u54C1\u767B\u5834",
             tag: "INTRO",
             color: "support",
             start: 17116,
@@ -8374,25 +8374,25 @@
           },
           {
             id: "seg-3",
-            title: "\u771F\u5BE6\u64CD\u4F5C\u4E00\u6B21",
+            title: "\u64CD\u4F5C\u793A\u7BC4",
             tag: "LIVE DEMO",
             color: "data",
             start: 44350,
             end: 110750,
-            dimAt: 0.12
+            dimAt: 0.04
           },
           {
             id: "seg-4",
-            title: "\u8B77\u6B04\u8207\u5E95\u7DDA",
+            title: "\u5B89\u5168\u5E95\u7DDA",
             tag: "SAFETY",
             color: "special",
             start: 111100,
             end: 142328,
-            dimAt: 0.12
+            dimAt: 0.04
           },
           {
             id: "seg-5",
-            title: "\u597D\u8A71\u7246\u600E\u9EBC\u73A9",
+            title: "\u53C3\u8207\u65B9\u5F0F",
             tag: "WALL",
             color: "accent",
             start: 142678,
@@ -8401,7 +8401,7 @@
           },
           {
             id: "seg-6",
-            title: "\u5148\u5C0D\u81EA\u5DF1\u8AAA\u4E00\u53E5",
+            title: "\u7D50\u8A9E",
             tag: "END",
             color: "special",
             start: 165204,
@@ -8418,9 +8418,10 @@
             side: "left",
             params: {
               text: "\u641E\u7838\u4E86\uFF0C\u7B2C\u4E00\u500B\u5FF5\u982D\u662F\n\u300C\u6211\u600E\u9EBC\u9019\u9EBC\u6C92\u7528\u300D",
-              fontSize: 76,
+              fontSize: 86,
               color: "accent"
-            }
+            },
+            width: 860
           },
           {
             id: "c1-2",
@@ -8431,9 +8432,10 @@
             params: {
               lines: "\u63DB\u6210\u5225\u4EBA\u5C0D\u4F60\u8AAA\n\u4F60\u65E9\u5C31\u751F\u6C23\u4E86\n\u5C0D\u81EA\u5DF1\u8AAA\uFF0C\u537B\u89BA\u5F97\u7406\u6240\u7576\u7136",
               highlight: "\u751F\u6C23",
-              fontSize: 48,
+              fontSize: 58,
               color: "special"
-            }
+            },
+            width: 860
           },
           {
             id: "c3-1",
@@ -8445,7 +8447,8 @@
               items: "\u6253\u9032\u5FC3\u4E8B\n\u63A5\u4F4F\u60C5\u7DD2\n\u7D66\u4F60\u4E00\u53E5\u597D\u8A71",
               color: "support",
               spreadMs: 1400
-            }
+            },
+            width: 860
           },
           {
             id: "c3-2",
@@ -8457,7 +8460,8 @@
               title: "\u5148\u8FA8\u8B58\uFF0C\u518D\u7D66\u8A71",
               stats: "\u60C5\u7DD2:\u5DE5\u4F5C\u58D3\u529B\n\u5F37\u5EA6:4/5\n\u8655\u5883:\u5DE5\u4F5C\n\u9806\u5E8F:\u6700\u5F8C\u624D\u7D66\u8A71",
               color: "data"
-            }
+            },
+            width: 860
           },
           {
             id: "c5",
@@ -8474,7 +8478,8 @@
               rightValue: 94,
               rightColor: "accent",
               footnote: "\u4E5F\u4E0D\u5047\u88DD\u4F60\u7684\u56F0\u96E3\u4E0D\u5B58\u5728"
-            }
+            },
+            width: 860
           },
           {
             id: "c6-1",
@@ -8484,9 +8489,10 @@
             side: "right",
             params: {
               text: "\u9019\u662F\u771F\u5BE6\u7684\u7DB2\u7AD9\u756B\u9762\n\u4E0D\u662F\u7C21\u5831",
-              fontSize: 56,
+              fontSize: 66,
               color: "support"
             },
+            width: 780,
             offsetY: -560
           },
           {
@@ -8503,6 +8509,7 @@
               sublabel: "\u76F4\u63A5\u6253\u51FA\u4F86",
               color: "data"
             },
+            width: 780,
             offsetY: -560
           },
           {
@@ -8516,6 +8523,7 @@
               stats: "\u807D\u5230\u7684:\u5DE5\u4F5C\u58D3\u529B\n\u5F37\u5EA6:4/5\n\u8A0A\u865F:\u81EA\u6211\u50F9\u503C\n\u56DE\u61C9:\u5148\u627F\u63A5",
               color: "data"
             },
+            width: 780,
             offsetY: -560
           },
           {
@@ -8528,6 +8536,7 @@
               items: "\u2460 \u627F\u63A5\n\u7528\u5B83\u7684\u8A71\uFF0C\u628A\u8655\u5883\u8AAA\u4E00\u6B21",
               doneColor: "special"
             },
+            width: 780,
             offsetY: -560
           },
           {
@@ -8539,9 +8548,10 @@
             params: {
               lines: "\u2461 \u597D\u8A71\n\u300C\u6211\u807D\u898B\u4F60\u70BA\u81EA\u5DF1\u8B1B\u8A71\u7684\n\u6BCF\u4E00\u79D2\u90FD\u8A8D\u771F\u300D",
               highlight: "\u8A8D\u771F",
-              fontSize: 44,
+              fontSize: 54,
               color: "accent"
             },
+            width: 780,
             offsetY: -560
           },
           {
@@ -8554,6 +8564,7 @@
               items: "\u2462 \u5C0F\u6B65\n\u4ECA\u665A\u5C31\u80FD\u505A\u7684\u4E00\u4EF6\u5C0F\u4E8B",
               doneColor: "data"
             },
+            width: 780,
             offsetY: -560
           },
           {
@@ -8568,6 +8579,7 @@
               color: "support",
               tagline: "\u63DB\u5C0D\u8C61\uFF0C\u751F\u6210\u4E0D\u540C\u7684\u8AAA\u6CD5"
             },
+            width: 780,
             offsetY: -560
           },
           {
@@ -8586,6 +8598,7 @@
               rightColor: "accent",
               footnote: "\u5C31\u8B8A\u6210\u53EF\u4EE5\u9001\u51FA\u53BB\u7684\u5584\u610F"
             },
+            width: 780,
             offsetY: -560
           },
           {
@@ -8599,6 +8612,7 @@
               stats: "\u5B58\u5728:\u4F60\u7684\u700F\u89BD\u5668\n\u767B\u5165:\u4E0D\u7528\n\u4E0A\u50B3:\u4E0D\u6703\n\u5E33\u865F:\u4E0D\u7D81",
               color: "data"
             },
+            width: 780,
             offsetY: -560
           },
           {
@@ -8609,9 +8623,10 @@
             side: "left",
             params: {
               text: "\u5371\u6A5F\u8A0A\u865F\n\u7ACB\u523B\u7D66\u6C42\u52A9\u8CC7\u6E90",
-              fontSize: 60,
+              fontSize: 70,
               color: "special"
             },
+            width: 780,
             offsetY: -560
           },
           {
@@ -8625,6 +8640,7 @@
               stats: "1925:\u5B89\u5FC3\u5C08\u7DDA\n1995:\u751F\u547D\u7DDA\n1980:\u5F35\u8001\u5E2B\n\u5E95\u7DDA:AI \u4E0D\u7576\u8AEE\u5546\u5E2B",
               color: "special"
             },
+            width: 780,
             offsetY: -560
           },
           {
@@ -8638,6 +8654,7 @@
               color: "data",
               spreadMs: 1600
             },
+            width: 780,
             offsetY: -560
           },
           {
@@ -8650,7 +8667,8 @@
               title: "\u597D\u8A71\u7246\u904B\u4F5C",
               stats: "\u533F\u540D\u639B\u7246:\u662F\nAI \u5148\u56DE\u61C9:\u4E00\u8F2A\n\u9F13\u52F5\u7D93 AI \u5BE9\u6838:\u624D\u986F\u793A\n\u96D9\u65B9\u5F97\u5206:\u662F",
               color: "data"
-            }
+            },
+            width: 860
           },
           {
             id: "c18-2",
@@ -8665,7 +8683,8 @@
               caption: "\u524D\u5341\u540D\u6709\u7A31\u865F",
               durMs: 1400,
               color: "special"
-            }
+            },
+            width: 860
           },
           {
             id: "c18-3",
@@ -8677,7 +8696,8 @@
               title: "\u6BCF\u9031\u4E00\u91CD\u7B97",
               items: "\u91CD\u7B97|\u6BCF\u9031\u4E00\u91CD\u7B97\u6392\u884C\u699C\n\u516C\u958B|\u6392\u884C\u699C\u516C\u958B\u900F\u660E\n\u7A31\u865F|\u524D\u5341\u540D\u6709\u7A31\u865F\n\u96B1\u79C1|\u5206\u6578\u53EA\u5B58\u5728\u4F60\u7684\u700F\u89BD\u5668",
               color: "support"
-            }
+            },
+            width: 860
           },
           {
             id: "c19",
@@ -8688,9 +8708,10 @@
             params: {
               lines: "\u597D\u597D\u8AAA\u8A71\n\u5148\u5C0D\u81EA\u5DF1\u8AAA\u4E00\u53E5\n\u518D\u628A\u5B83\u9001\u7D66\u5225\u4EBA",
               highlight: "\u597D\u597D\u8AAA\u8A71",
-              fontSize: 52,
+              fontSize: 62,
               color: "accent"
-            }
+            },
+            width: 860
           }
         ]
       };

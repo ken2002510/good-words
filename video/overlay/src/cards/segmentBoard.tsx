@@ -29,13 +29,13 @@ function SegmentBoard({ t, enterAt, exitAt, params }: any) {
               transform: `translateX(${(1 - eased) * -16}px)`,
             }}>
               <span style={{
-                fontSize: 15, fontWeight: 700, letterSpacing: 1.5,
+                fontSize: 20, fontWeight: 700, letterSpacing: 1.5,
                 padding: '3px 8px', borderRadius: 6,
                 border: `1px solid var(--c-${params.color})`,
                 color: `var(--c-${params.color})`,
                 opacity: lit ? 1 : 0.35,
               }}>{it.tag || '·'}</span>
-              <span style={{ fontSize: 24, fontWeight: 600, color: 'var(--c-text)' }}>{it.title}</span>
+              <span style={{ fontSize: 32, fontWeight: 600, color: 'var(--c-text)' }}>{it.title}</span>
               <span style={{
                 marginLeft: 'auto', width: 7, height: 7, borderRadius: '50%',
                 background: `var(--c-${params.color})`, opacity: lit ? 0.95 : 0,

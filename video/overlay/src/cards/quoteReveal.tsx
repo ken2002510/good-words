@@ -25,7 +25,7 @@ function QuoteReveal({ t, enterAt, exitAt, params }: any) {
           return (
             <div key={i} style={{
               opacity: a, transform: `translateY(${rise}px)`,
-              fontSize: Number(params.fontSize ?? 52),
+              fontSize: Number(params.fontSize ?? 62),
               fontWeight: 650, lineHeight: 1.42,
               letterSpacing: '0.5px',
               color: 'var(--c-text)',
