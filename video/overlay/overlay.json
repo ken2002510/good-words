@@ -19,7 +19,7 @@
       "color": "support",
       "start": 17116,
       "end": 44000,
-      "dimAt": 0.4
+      "dimAt": 0.15
     },
     {
       "id": "seg-3",
@@ -87,28 +87,15 @@
       "width": 860
     },
     {
-      "id": "c3-1",
+      "id": "c3",
       "effect": "timeline-milestones",
       "start": 17266,
-      "end": 28390,
+      "end": 27818,
       "side": "left",
       "params": {
         "items": "打進心事\n接住情緒\n給你一句好話",
         "color": "support",
         "spreadMs": 1400
-      },
-      "width": 860
-    },
-    {
-      "id": "c3-2",
-      "effect": "stat-board",
-      "start": 29040,
-      "end": 37836,
-      "side": "right",
-      "params": {
-        "title": "先辨識，再給話",
-        "stats": "情緒:工作壓力\n強度:4/5\n處境:工作\n順序:最後才給話",
-        "color": "data"
       },
       "width": 860
     },

@@ -8370,7 +8370,7 @@
             color: "support",
             start: 17116,
             end: 44e3,
-            dimAt: 0.4
+            dimAt: 0.15
           },
           {
             id: "seg-3",
@@ -8438,28 +8438,15 @@
             width: 860
           },
           {
-            id: "c3-1",
+            id: "c3",
             effect: "timeline-milestones",
             start: 17266,
-            end: 28390,
+            end: 27818,
             side: "left",
             params: {
               items: "\u6253\u9032\u5FC3\u4E8B\n\u63A5\u4F4F\u60C5\u7DD2\n\u7D66\u4F60\u4E00\u53E5\u597D\u8A71",
               color: "support",
               spreadMs: 1400
-            },
-            width: 860
-          },
-          {
-            id: "c3-2",
-            effect: "stat-board",
-            start: 29040,
-            end: 37836,
-            side: "right",
-            params: {
-              title: "\u5148\u8FA8\u8B58\uFF0C\u518D\u7D66\u8A71",
-              stats: "\u60C5\u7DD2:\u5DE5\u4F5C\u58D3\u529B\n\u5F37\u5EA6:4/5\n\u8655\u5883:\u5DE5\u4F5C\n\u9806\u5E8F:\u6700\u5F8C\u624D\u7D66\u8A71",
-              color: "data"
             },
             width: 860
           },

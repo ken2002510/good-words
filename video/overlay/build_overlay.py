@@ -39,6 +39,8 @@ INSET_MS = 150          # 卡窗內縮
 DEMO_OFFSET_Y = -560    # demo 段卡片上移
 DEMO_DIM = 0.04   # demo 段幾乎不壓暗：真實網站畫面要清楚（評審要看得出是真的在用）
 NORMAL_DIM = 0.40
+# 個別段落覆寫暗化值：seg2 後半要播「全幅真實截圖」，壓暗要輕
+SEG_DIM = {2: 0.15}
 
 # ---------------------------------------------------------------- 19 段編排
 # key = timeline idx；value = list of card specs（一個 run 安排多張卡時依序平分 run 視窗）
@@ -48,11 +50,11 @@ PLAN: dict[int, list[dict]] = {
     2: [dict(effect="quote-reveal", side="right", params=dict(
         lines="換成別人對你說\n你早就生氣了\n對自己說，卻覺得理所當然",
         highlight="生氣", fontSize=58, color="special"))],
-    3: [dict(effect="timeline-milestones", side="left", params=dict(
+    # seg2：前半只留一張流程卡（window 0→0.52），後半留白給「全幅真實截圖」
+    # （assemble.py 會在 0.54→1.0 插入 S2_rewrite_result / S10_mobile_375_result）
+    3: [dict(effect="timeline-milestones", side="left", window=(0.0, 0.52), params=dict(
         items="打進心事\n接住情緒\n給你一句好話", color="support", spreadMs=1400))],
-    4: [dict(effect="stat-board", side="right", params=dict(
-        title="先辨識，再給話",
-        stats="情緒:工作壓力\n強度:4/5\n處境:工作\n順序:最後才給話", color="data"))],
+    4: [],   # 原「先辨識，再給話」數據卡移除（審查：抽象數據卡最像套模板，改用真畫面）
     5: [dict(effect="compare-bars", side="left", params=dict(
         title="它不說…", leftLabel="「加油」", leftValue=6, leftColor="support",
         rightLabel="具體的好話", rightValue=94, rightColor="accent",
@@ -158,7 +160,14 @@ def build() -> dict:
         #  - run 只排 1 張卡：同 card 連續 run 取 [首段start, 尾段end] 再內縮 150ms
         #  - 每段恰一張卡：依各段 [start, end] 各自內縮 150ms
         #  - 一段多張卡（如 seg5 三張）：把 run 視窗等分後再各內縮 150ms
-        if n == 1:
+        win_override = next((s.get("window") for s in specs if s.get("window")), None)
+        if win_override:
+            # 自帶分數視窗（相對 run 起訖）：用來刻意留出「全幅真畫面」的時段
+            f0, f1 = win_override
+            span = run_end - run_start
+            wins = [(run_start + span * f0 + INSET_MS / 1000,
+                     run_start + span * f1 - INSET_MS / 1000)]
+        elif n == 1:
             wins = [(run_start + INSET_MS / 1000, run_end - INSET_MS / 1000)]
         elif n == len(items):
             wins = [(it["start"] + INSET_MS / 1000, it["end"] - INSET_MS / 1000) for it in items]
@@ -208,7 +217,7 @@ def build() -> dict:
             "color": color,
             "start": ms(s0),
             "end": ms(e0),
-            "dimAt": DEMO_DIM if is_demo else NORMAL_DIM,
+            "dimAt": DEMO_DIM if is_demo else SEG_DIM.get(num, NORMAL_DIM),
         })
 
     return {

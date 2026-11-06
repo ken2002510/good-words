@@ -152,17 +152,26 @@ def main() -> int:
         print(f"[assemble] !! Demo 視窗比錄影長（{demo_len:.1f}s > {demo_dur:.1f}s），"
               f"尾端會凍結；錄影時請加長停頓")
 
-    # ---- seg5（card=tech）截圖視窗：S4/S7/S8 依序平分該 run 的成片時間 ----
+    # ---- 全幅真畫面（截圖）視窗 ----
+    # (1) seg2 後半：真實「改寫結果」與「手機版」畫面（回應「看不出真實功能」）
+    #     overlay 的 seg2 卡片只佔 run 前 52%，這裡從 54% 起插入兩張全幅截圖。
+    title_run = next(r for r in runs if r[0] == "title")
+    t0, t1 = title_run[1] + head_pad, title_run[2] + head_pad
+    tlen = t1 - t0
+    shot_wins: list[tuple[str, float, float]] = [
+        ("S2_rewrite_result", t0 + 0.54 * tlen, t0 + 0.80 * tlen),
+        ("S10_mobile_375_result", t0 + 0.80 * tlen, t1),
+    ]
+    # (2) seg5（card=tech）：S4/S7/S8 依序平分該 run 的成片時間
     tech_run = next(r for r in runs if r[0] == "tech")
     shot_a, shot_b = tech_run[1] + head_pad, tech_run[2] + head_pad
-    shot_names = ["S4_wall_after_publish", "S7_me_panel", "S8_leaderboard_top10"]
-    n_shot = len(shot_names)
-    seg_len = (shot_b - shot_a) / n_shot
-    shot_wins: list[tuple[str, float, float]] = []
-    for i, nm in enumerate(shot_names):
+    tail_names = ["S4_wall_after_publish", "S7_me_panel", "S8_leaderboard_top10"]
+    seg_len = (shot_b - shot_a) / len(tail_names)
+    for i, nm in enumerate(tail_names):
         a = shot_a + i * seg_len
-        b = shot_a + (i + 1) * seg_len if i < n_shot - 1 else shot_b
+        b = shot_a + (i + 1) * seg_len if i < len(tail_names) - 1 else shot_b
         shot_wins.append((nm, a, b))
+    for nm, a, b in shot_wins:
         print(f"[assemble] shot {nm}: {a:.3f}-{b:.3f} ({b - a:.3f}s)")
 
     # 旁白整體平移 head_pad
