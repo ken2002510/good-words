@@ -182,6 +182,24 @@ S9_crisis_panel, S10_mobile_375_home, S10_mobile_375_result。
 - v4 成片：176.0s / **49.9 MB**（crf 20→23，動態背景+grain 在 crf20 會到 81MB）/ h264 1080x1920@30
   yuv420p + AAC 44.1k，qa_check 4 關 PASS、verify_motion PASS。備份 `out/backup_v3_176s.mp4`。
 
+## 8d. v5 背景改用 Google Flow 真實生圖（2026-11-06 第四輪）
+
+依 `SKILL-google-flow-image-gen`（hermes `creative/google-flow-image-gen`＋obsidian 鏡像）與
+`finance-ig/tools/flow-gen2.js` 的實測經驗，用受控 Chrome（port 9334，profile 登入為使用者本人先前手動完成）
+在 Flow 專案 ed000562 以 **9:16、x1、🍌 Nano Banana 2.1** 生成 6 張抽象暖色背景（prompt 禁止文字/人/Logo；
+NIM key 無生圖授權故走 Flow UI）。驗收：9 張候選全部 768×1376、SHA-256 全異、RapidOCR 7/9 無文字
+（cand-05/06 各有低信心偽字元，未採用）。依亮度/色溫對到各段：q_self=cand-07、title=cand-01、
+rules=cand-03、threegood=cand-09、tech=cand-04、end=cand-02 → `assets/bg/img/*.jpg`。
+
+- `gen_bg_img.py`：每張圖放大到 1296×2304 後 zoompan 慢推 1.0→1.10 + 中心微漂移，依 timeline run 連續覆蓋
+  [0,178s]（空隙用前段圖延伸、demo 段深色），concat 成 `assets/bg/bg.mp4`（28MB）。
+- assemble 疊 bg.mp4 成底（`-stream_loop -1`），另加 `scale=out_range=tv` + bt709標籤，輸出維持 yuv420p/tv。
+- v5 成片：176.0s / **36.9MB** / h264 High 4.1 1080x1920@30 yuv420p(tv) + AAC；qa_check 4 關 PASS、
+  verify_motion PASS；實測各段背景 mean RGB 互異（q_self 24/18/13、title 97/68/53、threegood 90/57/31…）、
+  demo 視窗仍是真實錄影、字幕 y1647–1823（底緣留白 97px）。備份 `out/backup_v4_176s.mp4`。
+- 花絮：flow-gen2.js 的 45s 早退會把「其實已送出」誤判 not-triggered，圖仍在背景生成完成；
+  用 `gwbg-harvest.js` 捲到底抓 asb 原圖（=s2048）收割即可，不必重燒額度。
+
 ## 9. v2 合成踩過的坑（記錄，避免後人踩）
 
 1. **fade 的 st 必須是 setpts 位移「之後」的絕對秒數**：

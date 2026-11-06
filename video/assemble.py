@@ -304,14 +304,18 @@ def main() -> int:
         f"[vband]subtitles='{esc}':"
         f"force_style='FontName=Microsoft JhengHei,FontSize=16,"
         f"PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1,"
-        f"Outline=1,Shadow=1,Alignment=2,MarginV=12'[vout]"
+        f"Outline=1,Shadow=1,Alignment=2,MarginV=12'[vsub]"
     )
+    # 色彩範圍正規化：bg 圖源是 full-range，統一壓成 limited tv，避免 yuvj420p
+    f.append("[vsub]scale=in_range=auto:out_range=tv,format=yuv420p,setsar=1[vout]")
 
     cmd += [
         "-filter_complex", ";".join(f),
         "-map", "[vout]", "-map", "2:a",
         "-c:v", "libx264", "-preset", "medium", "-crf", "23",
-        "-pix_fmt", "yuv420p", "-profile:v", "high", "-level", "4.1",
+        "-pix_fmt", "yuv420p", "-color_range", "tv",
+        "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
+        "-profile:v", "high", "-level", "4.1",
         "-r", str(FPS), "-g", str(FPS * 2),
         "-c:a", "aac", "-b:a", "160k", "-ar", "44100", "-ac", "2",
         "-movflags", "+faststart",
