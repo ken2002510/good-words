@@ -28,6 +28,8 @@ HERE = Path(__file__).resolve().parent
 RAW = HERE / "raw"
 ASSETS = HERE / "assets"
 CARDS = ASSETS / "cards"
+# 字幕字型目錄：Noto Sans TC（OFL，可散布）— 由 skill `bilingual-subtitles` 提供
+SUB_FONTS = Path(r"C:\Users\User\Documents\ig-reels-auto-editor\fonts")
 AUDIO = ASSETS / "audio"
 TTS = ASSETS / "tts"
 OUT = HERE / "out"
@@ -219,17 +221,9 @@ def main() -> int:
         cmd += ["-loop", "1", "-t", f"{total + 5.0:.3f}", "-i", str(p)]
     # 動態疊卡（ProRes 4444，帶 alpha）
     cmd += ["-i", str(overlay_mp4)]
-    # 字幕用底部漸層遮罩（取代硬邊黑條；上緣柔和淡入）
-    grad_png = CARDS / "subtitle_gradient.png"
-    if not grad_png.exists():
-        print(f"!! 缺 {grad_png} —— 請先跑 make_sub_gradient.py")
-        return 3
-    cmd += ["-loop", "1", "-t", f"{total + 5.0:.3f}", "-i", str(grad_png)]
-
     IDX_CARD0 = 3
     IDX_SHOT0 = IDX_CARD0 + len(card_files)
     IDX_OVL = IDX_SHOT0 + len(shot_paths)
-    IDX_GRAD = IDX_OVL + 1
 
     # ---- filter ----
     # demo 畫面：scale+crop 填滿 1080x1920
@@ -311,24 +305,21 @@ def main() -> int:
         f.append(f"[{cur}][{tag}]overlay=0:0:eof_action=pass:enable='between(t,{a:.3f},{b:.3f})'[v{tag}]")
         cur = f"v{tag}"
 
-    # 字幕：固定在最底部的專屬橫帶（永遠最後疊），並加一層半透明底，
-    # 避免和字卡的文字重疊（先前抽幀看到字幕蓋在字卡文字上）。
+    # 字幕（v11）：改用 ASS（白字＋黑描邊＋柔和陰影、**無黑底**），
+    # 依 skill `bilingual-subtitles/references/formatting.md` 的直式規格：
+    # 主要語言 ≈4.8% 畫面高、描邊 3–6px、陰影 1–2px、不要底框、Noto Sans TC（OFL）。
+    # 視覺模型在 5 個候選中選出 B：Noto Sans TC 88px / 描邊 6 / 陰影 2 / MarginV 300。
     srt = AUDIO / "subtitles.srt"
     shifted = AUDIO / "subtitles_shifted.srt"
     _shift_srt(srt, shifted, head_pad)
-    esc = str(shifted).replace("\\", "/").replace(":", "\\:")
-    # 字幕底：漸層遮罩（y 1560..1920，上緣 alpha 0→100→205）而非硬邊 drawbox，
-    # 避免在 demo 白底畫面上出現一條突兀黑條（實測落差 93/255）。
-    grad_h = 360
-    f.append(f"[{IDX_GRAD}:v]format=rgba,trim=0:{total:.3f},setpts=PTS-STARTPTS[grad]")
-    f.append(f"[{cur}][grad]overlay=0:{H - grad_h}:eof_action=pass[vband]")
-    # v7：字號 16→17（行高 ~74px）、維持 MarginV=12（底緣留白 ~97px）
-    f.append(
-        f"[vband]subtitles='{esc}':"
-        f"force_style='FontName=Microsoft JhengHei,FontSize=17,"
-        f"PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1,"
-        f"Outline=3,Shadow=1,Alignment=2,MarginV=12'[vsub]"
-    )
+    ass = AUDIO / "subtitles_shifted.ass"
+    sys.path.insert(0, str(HERE))
+    from make_ass import build as build_ass
+    # 字級 80（墨高約 46px，比舊版 66px 小 ~30%）；每行依實際寬度自動斷行、保證不出畫面
+    build_ass("Noto Sans TC", 80, 6.0, 2.0, 300, 16, 0.2, 0.3, 100, shifted, ass, margin_lr=90)
+    esc = str(ass).replace("\\", "/").replace(":", "\\:")
+    fd = str(SUB_FONTS).replace("\\", "/").replace(":", "\\:")
+    f.append(f"[{cur}]subtitles='{esc}':fontsdir='{fd}'[vsub]")
     # 色彩範圍正規化：bg 圖源是 full-range，統一壓成 limited tv，避免 yuvj420p
     f.append("[vsub]scale=in_range=auto:out_range=tv,format=yuv420p,setsar=1[vout]")
 
