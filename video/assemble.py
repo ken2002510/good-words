@@ -160,7 +160,8 @@ def main() -> int:
     tlen = t1 - t0
     shot_wins: list[tuple[str, float, float]] = [
         ("S2_rewrite_result", t0 + 0.54 * tlen, t0 + 0.80 * tlen),
-        ("S10_mobile_375_result", t0 + 0.80 * tlen, t1),
+        # 手機版用事先做好的「手機卡片＋模糊底」構圖（原生 750x1624 置中，不放大 → 不模糊）
+        ("S10_mobile_375_result_framed", t0 + 0.80 * tlen, t1),
     ]
     # (2) seg5（card=tech）：S4/S7/S8 依序平分該 run 的成片時間
     tech_run = next(r for r in runs if r[0] == "tech")
@@ -326,7 +327,7 @@ def main() -> int:
         f"[vband]subtitles='{esc}':"
         f"force_style='FontName=Microsoft JhengHei,FontSize=17,"
         f"PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1,"
-        f"Outline=2,Shadow=1,Alignment=2,MarginV=12'[vsub]"
+        f"Outline=3,Shadow=1,Alignment=2,MarginV=12'[vsub]"
     )
     # 色彩範圍正規化：bg 圖源是 full-range，統一壓成 limited tv，避免 yuvj420p
     f.append("[vsub]scale=in_range=auto:out_range=tv,format=yuv420p,setsar=1[vout]")

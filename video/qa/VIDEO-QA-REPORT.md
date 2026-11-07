@@ -278,6 +278,40 @@ rules=cand-03、threegood=cand-09、tech=cand-04、end=cand-02 → `assets/bg/im
 - v9 成片：176.0s / **37.9MB** / yuv420p(tv) + AAC；qa_check 4 關 PASS、verify_motion PASS、
   verify_overlay ALL PASS（5276 幀，卡片 x[44..1039]、y≤1206）。備份 `out/backup_v8_176s.mp4`。
 
+## 8i. v10：「讓模型看影片」實驗 + 三項修正（2026-11-08）
+
+### 模型能不能看影片？（實測，三條視覺路線各回報一次）
+素材：`qa/motion/`（全片膠捲 3 張、分段連續影格 3 條、動畫 GIF 3 個 4fps、低碼率 mp4 20s）。
+
+| 路線（provider nvidia） | mp4 | 動畫 GIF | 膠捲 PNG | 分數 |
+|---|---|---|---|---|
+| `meta/llama-3.2-90b-vision-instruct` | ✗ 讀不到 | ✓ 讀到（並描述動態） | 部分 ✓ | 80/100 |
+| `google/gemma-3-12b-it` | ✗ | — | — | 啟動失敗 |
+| `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning` | ✗ 讀不到 | ✓ 讀到（並描述動態） | ✓ | 78/100 |
+
+**結論：目前可用的模型路線都無法直接讀 mp4；但 `read_image` 支援 GIF，動畫 GIF 可以讓模型看到動態**
+（Omni 從 GIF 描述出「字卡以淡入位移呈現、未見凍結」；Llama 也從 GIF 描述出卡片出現/背景漸層）。
+另外 `meta/llama-3.2-11b-vision-instruct`、`nvidia/nemotron-3.5-super-vl-120b-a12b`、
+`nvidia/cosmos-reason2-8b` 三條在此 session **不被允許或啟動失敗**。
+
+### 依它們的建議做的三項修正
+1. **字卡進場放慢**：`parts.tsx` 進場 420/520ms → **620/800ms**、出場 260→320ms（審查：「過渡略顯生硬」；
+   也符合使用者「寧慢勿快」偏好）。
+2. **字幕對比加強**：漸層遮罩 RAMP 140→170px、滿值 alpha 205→**228**、曲線 gamma 1.5→0.7，
+   字幕 `Outline 2→3`。量測（對 v8）：亮畫面段 t=100 字幕底平均亮度 38.6 → **24.0**（壓得更黑）；
+   y1647 處 alpha 100→143。
+3. **手機版截圖不再被放大**：新增 `S10_mobile_375_result_framed.png`（`make_framed_shot.py`：
+   原生 750×1624 置中、圓角＋白框、背景用自身放大模糊壓暗）。量測 t=35.5：
+   中央（手機內容）銳利度 3.88 vs 兩側（模糊底）0.24／0.26 ＝ **16.2×**，不再模糊。
+
+### 順手修掉一個真 bug（verify 抓到）
+放慢進場後 `verify_overlay` FAIL：卡片「跳出」overshoot 讓卡片瞬間外擴約 11px，
+超出安全區（f04300 x1=**32**、f04520 x2=**1048**）。修法：把縮放原點釘在靠邊那一側
+（`--card-origin`：左卡 `0% 60%`、右卡 `100% 60%`），overshoot 只往畫面內長。
+修後 verify **ALL PASS**（f04300 x[44..711]、f04520 x[368..1036]）。
+- v10 成片：176.0s / 37.6MB / yuv420p(tv) + AAC；qa_check 4 關 PASS、verify_motion PASS、
+  verify_overlay ALL PASS（5276 幀）。備份 `out/backup_v9_176s.mp4`。
+
 ### 尚未處理（需要你決定，屬內容／結構層）
 - 審查員建議：**在片中放一段「使用者輸入負面自語 → 系統即時改寫成承接/好話/小步 → 貼上牆」的真實流程畫面**，
   並認為 seg2 的抽象時間軸／數據卡最像「套模板」。

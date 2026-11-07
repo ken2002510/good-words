@@ -159,8 +159,16 @@ function CardSlot({ c, t }: { c: CardInstance; t: number }) {
         zIndex: 10,
       }}
     >
-      {/* 內層：zoom scale（預設 0.92）→ 卡寬 = def.width x scale，字級跟著縮 */}
-      <div ref={wrapRef} style={{ width, zoom: scale }}>
+      {/* 內層：zoom scale（預設 0.92）→ 卡寬 = def.width x scale，字級跟著縮。
+          --card-origin 讓卡片縮放原點貼齊靠邊那一側（overshoot 不會外擴出安全區）。 */}
+      <div
+        ref={wrapRef}
+        style={{
+          width,
+          zoom: scale,
+          ['--card-origin' as any]: c.side === 'left' ? '0% 60%' : '100% 60%',
+        }}
+      >
         <Comp t={t} enterAt={c.start} exitAt={c.end} params={fullParams} />
       </div>
     </div>

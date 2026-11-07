@@ -7373,11 +7373,11 @@
       init_clock();
       import_jsx_runtime = __toESM(require_jsx_runtime());
       CardShell = ({ t, enterAt, exitAt, style, children }) => {
-        const a = clamp01(prog(t, enterAt, 420));
-        const rise = (1 - easeOutCubic(prog(t, enterAt, 520))) * 22;
-        const pop = easeOutBack(prog(t, enterAt, 520));
+        const a = clamp01(prog(t, enterAt, 620));
+        const rise = (1 - easeOutCubic(prog(t, enterAt, 800))) * 22;
+        const pop = easeOutBack(prog(t, enterAt, 800));
         const scale = 0.62 + 0.38 * pop;
-        const fade = 1 - clamp01((t - exitAt) / 260);
+        const fade = 1 - clamp01((t - exitAt) / 320);
         const alpha = Math.min(a, fade);
         if (alpha <= 1e-3) return null;
         return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
@@ -7387,7 +7387,6 @@
             style: {
               opacity: alpha,
               transform: `translateY(${rise}px) scale(${scale})`,
-              transformOrigin: "50% 60%",
               ...style
             },
             children
@@ -8202,7 +8201,18 @@
             width: width * scale,
             zIndex: 10
           },
-          children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { ref: wrapRef, style: { width, zoom: scale }, children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Comp, { t, enterAt: c.start, exitAt: c.end, params: fullParams }) })
+          children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+            "div",
+            {
+              ref: wrapRef,
+              style: {
+                width,
+                zoom: scale,
+                ["--card-origin"]: c.side === "left" ? "0% 60%" : "100% 60%"
+              },
+              children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Comp, { t, enterAt: c.start, exitAt: c.end, params: fullParams })
+            }
+          )
         }
       )
     );

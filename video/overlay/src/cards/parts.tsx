@@ -9,12 +9,14 @@ export const CardShell: FC<{
   style?: React.CSSProperties
   children: ReactNode
 }> = ({ t, enterAt, exitAt, style, children }) => {
-  const a = clamp01(prog(t, enterAt, 420))
-  const rise = (1 - easeOutCubic(prog(t, enterAt, 520))) * 22
-  // 跳出（pop）：進場 520ms 內 scale 0.62→1 with overshoot（easeOutBack）
-  const pop = easeOutBack(prog(t, enterAt, 520))
+  // v10：進場放慢（0.42/0.52s → 0.62/0.80s）。視覺審查反映「字卡過渡略顯生硬」，
+  // 且使用者偏好「寧慢勿快」；淡出也從 260ms 放寬到 320ms。
+  const a = clamp01(prog(t, enterAt, 620))
+  const rise = (1 - easeOutCubic(prog(t, enterAt, 800))) * 22
+  // 跳出（pop）：進場 800ms 內 scale 0.62→1 with overshoot（easeOutBack）
+  const pop = easeOutBack(prog(t, enterAt, 800))
   const scale = 0.62 + 0.38 * pop
-  const fade = 1 - clamp01((t - exitAt) / 260)
+  const fade = 1 - clamp01((t - exitAt) / 320)
   const alpha = Math.min(a, fade)
   if (alpha <= 0.001) return null
   return (
@@ -23,7 +25,6 @@ export const CardShell: FC<{
       style={{
         opacity: alpha,
         transform: `translateY(${rise}px) scale(${scale})`,
-        transformOrigin: '50% 60%',
         ...style,
       }}
     >

@@ -226,6 +226,9 @@ button { font-family: inherit; }
    ============================================================ */
 .fx-card {
   position: relative;
+  /* 跳出動畫的縮放原點：由 Stage 依卡片靠哪一側給（左卡=左緣、右卡=右緣），
+     這樣 overshoot 只會往畫面內長，不會瞬間超出兩側安全區 */
+  transform-origin: var(--card-origin, 50% 60%);
   border-radius: 24px;
   padding: 34px 44px;
   /* 暖色調玻璃：與生成的暖色背景同一色系，不用冷灰藍（避免「兩個設計系統」感） */
