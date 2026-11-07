@@ -315,8 +315,9 @@ def main() -> int:
     ass = AUDIO / "subtitles_shifted.ass"
     sys.path.insert(0, str(HERE))
     from make_ass import build as build_ass
-    # 字級 80（墨高約 46px，比舊版 66px 小 ~30%）；每行依實際寬度自動斷行、保證不出畫面
-    build_ass("Noto Sans TC", 80, 6.0, 2.0, 300, 16, 0.2, 0.3, 100, shifted, ass, margin_lr=90)
+    # 視覺終審建議：80→70px、描邊 6→4、位置再抬高一點（MarginV 400 → 底緣 y1520）。
+    # 卡片全片最低只到 y=1210（掃 overlay.mp4 alpha 實測），不會撞字幕。
+    build_ass("Noto Sans TC", 70, 4.0, 2.0, 400, 16, 0.2, 0.3, 100, shifted, ass, margin_lr=90)
     esc = str(ass).replace("\\", "/").replace(":", "\\:")
     fd = str(SUB_FONTS).replace("\\", "/").replace(":", "\\:")
     f.append(f"[{cur}]subtitles='{esc}':fontsdir='{fd}'[vsub]")
