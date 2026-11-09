@@ -66,7 +66,7 @@
       "end": 8850,
       "side": "left",
       "params": {
-        "text": "搞砸了，第一個念頭是\n「我怎麼這麼沒用」",
+        "text": "對別人寬容\n對自己最嚴厲",
         "fontSize": 86,
         "color": "accent"
       },
@@ -79,8 +79,8 @@
       "end": 16616,
       "side": "right",
       "params": {
-        "lines": "換成別人對你說\n你早就生氣了\n對自己說，卻覺得理所當然",
-        "highlight": "生氣",
+        "lines": "同一句話\n換個人說，你會生氣\n對自己說，卻默默收下",
+        "highlight": "默默收下",
         "fontSize": 58,
         "color": "special"
       },
@@ -124,12 +124,12 @@
       "end": 50224,
       "side": "right",
       "params": {
-        "text": "這是真實的網站畫面\n不是簡報",
+        "text": "不剪接\n直接操作一次",
         "fontSize": 66,
         "color": "support"
       },
       "width": 780,
-      "offsetY": -560
+      "offsetY": -210
     },
     {
       "id": "c6-2",
@@ -146,7 +146,7 @@
         "color": "data"
       },
       "width": 780,
-      "offsetY": -560
+      "offsetY": -210
     },
     {
       "id": "c6-3",
@@ -160,7 +160,7 @@
         "color": "data"
       },
       "width": 780,
-      "offsetY": -560
+      "offsetY": -210
     },
     {
       "id": "c6-4",
@@ -173,7 +173,7 @@
         "doneColor": "special"
       },
       "width": 780,
-      "offsetY": -560
+      "offsetY": -210
     },
     {
       "id": "c6-5",
@@ -188,7 +188,7 @@
         "color": "accent"
       },
       "width": 780,
-      "offsetY": -560
+      "offsetY": -210
     },
     {
       "id": "c6-6",
@@ -201,7 +201,7 @@
         "doneColor": "data"
       },
       "width": 780,
-      "offsetY": -560
+      "offsetY": -210
     },
     {
       "id": "c6-7",
@@ -216,7 +216,7 @@
         "tagline": "換對象，生成不同的說法"
       },
       "width": 780,
-      "offsetY": -560
+      "offsetY": -210
     },
     {
       "id": "c6-8",
@@ -235,7 +235,7 @@
         "footnote": "就變成可以送出去的善意"
       },
       "width": 780,
-      "offsetY": -560
+      "offsetY": -210
     },
     {
       "id": "c6-9",
@@ -249,7 +249,7 @@
         "color": "data"
       },
       "width": 780,
-      "offsetY": -560
+      "offsetY": -210
     },
     {
       "id": "c6-10",
@@ -263,7 +263,7 @@
         "color": "special"
       },
       "width": 780,
-      "offsetY": -560
+      "offsetY": -210
     },
     {
       "id": "c6-11",
@@ -277,7 +277,7 @@
         "color": "special"
       },
       "width": 780,
-      "offsetY": -560
+      "offsetY": -210
     },
     {
       "id": "c17",
@@ -291,7 +291,7 @@
         "spreadMs": 1600
       },
       "width": 780,
-      "offsetY": -560
+      "offsetY": -210
     },
     {
       "id": "c18-1",
@@ -342,8 +342,8 @@
       "end": 172686,
       "side": "right",
       "params": {
-        "lines": "好好說話\n先對自己說一句\n再把它送給別人",
-        "highlight": "好好說話",
+        "lines": "把話\n好好說完",
+        "highlight": "好好說完",
         "fontSize": 62,
         "color": "accent"
       },

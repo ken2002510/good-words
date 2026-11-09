@@ -224,12 +224,13 @@ def card_end() -> Image.Image:
     """
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    x0, y0, x1, y1 = 90, 1430, 990, 1690
-    d.rounded_rectangle([x0, y0, x1, y1], radius=36, fill=(16, 13, 11, 205),
+    # v12：面板整塊移到字幕下方（字幕底緣 y1509，面板從 1560 起），避免字幕壓在網址卡上
+    x0, y0, x1, y1 = 110, 1560, 970, 1795
+    d.rounded_rectangle([x0, y0, x1, y1], radius=34, fill=(16, 13, 11, 200),
                         outline=(232, 179, 106, 150), width=3)
-    d.line([(x0 + 44, y0 + 62), (x0 + 44 + 300, y0 + 62)], fill=(232, 179, 106, 255), width=5)
-    d.text((x0 + 44, y0 + 92), "good-words.vercel.app", font=font(62, bold=True), fill=(232, 179, 106, 255))
-    d.text((x0 + 44, y0 + 178), "免登入 · 不上傳 · 手機優先", font=font(40), fill=(214, 200, 186, 255))
+    d.line([(x0 + 44, y0 + 58), (x0 + 44 + 280, y0 + 58)], fill=(232, 179, 106, 255), width=5)
+    d.text((x0 + 44, y0 + 84), "good-words.vercel.app", font=font(58, bold=True), fill=(232, 179, 106, 255))
+    d.text((x0 + 44, y0 + 166), "免登入 · 不上傳 · 手機優先", font=font(38), fill=(214, 200, 186, 255))
     return img
 
 

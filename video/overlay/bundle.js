@@ -8268,9 +8268,9 @@
       SIDE_MARGIN = 44;
       CARD_W_SCALE = 0.92;
       CARD_SCALE_MIN = 0.5;
-      TOP_LIMIT = 12;
-      CENTER_Y = STAGE_H / 2;
-      SUBTITLE_TOP = STAGE_H - 220;
+      TOP_LIMIT = 250;
+      CENTER_Y = 810;
+      SUBTITLE_TOP = 1370;
       SEG_LEFT = 48;
       SEG_TOP = 110;
       clamp01_ = (x) => Math.max(0, Math.min(1, x));
@@ -8427,7 +8427,7 @@
             end: 8850,
             side: "left",
             params: {
-              text: "\u641E\u7838\u4E86\uFF0C\u7B2C\u4E00\u500B\u5FF5\u982D\u662F\n\u300C\u6211\u600E\u9EBC\u9019\u9EBC\u6C92\u7528\u300D",
+              text: "\u5C0D\u5225\u4EBA\u5BEC\u5BB9\n\u5C0D\u81EA\u5DF1\u6700\u56B4\u53B2",
               fontSize: 86,
               color: "accent"
             },
@@ -8440,8 +8440,8 @@
             end: 16616,
             side: "right",
             params: {
-              lines: "\u63DB\u6210\u5225\u4EBA\u5C0D\u4F60\u8AAA\n\u4F60\u65E9\u5C31\u751F\u6C23\u4E86\n\u5C0D\u81EA\u5DF1\u8AAA\uFF0C\u537B\u89BA\u5F97\u7406\u6240\u7576\u7136",
-              highlight: "\u751F\u6C23",
+              lines: "\u540C\u4E00\u53E5\u8A71\n\u63DB\u500B\u4EBA\u8AAA\uFF0C\u4F60\u6703\u751F\u6C23\n\u5C0D\u81EA\u5DF1\u8AAA\uFF0C\u537B\u9ED8\u9ED8\u6536\u4E0B",
+              highlight: "\u9ED8\u9ED8\u6536\u4E0B",
               fontSize: 58,
               color: "special"
             },
@@ -8485,12 +8485,12 @@
             end: 50224,
             side: "right",
             params: {
-              text: "\u9019\u662F\u771F\u5BE6\u7684\u7DB2\u7AD9\u756B\u9762\n\u4E0D\u662F\u7C21\u5831",
+              text: "\u4E0D\u526A\u63A5\n\u76F4\u63A5\u64CD\u4F5C\u4E00\u6B21",
               fontSize: 66,
               color: "support"
             },
             width: 780,
-            offsetY: -560
+            offsetY: -210
           },
           {
             id: "c6-2",
@@ -8507,7 +8507,7 @@
               color: "data"
             },
             width: 780,
-            offsetY: -560
+            offsetY: -210
           },
           {
             id: "c6-3",
@@ -8521,7 +8521,7 @@
               color: "data"
             },
             width: 780,
-            offsetY: -560
+            offsetY: -210
           },
           {
             id: "c6-4",
@@ -8534,7 +8534,7 @@
               doneColor: "special"
             },
             width: 780,
-            offsetY: -560
+            offsetY: -210
           },
           {
             id: "c6-5",
@@ -8549,7 +8549,7 @@
               color: "accent"
             },
             width: 780,
-            offsetY: -560
+            offsetY: -210
           },
           {
             id: "c6-6",
@@ -8562,7 +8562,7 @@
               doneColor: "data"
             },
             width: 780,
-            offsetY: -560
+            offsetY: -210
           },
           {
             id: "c6-7",
@@ -8577,7 +8577,7 @@
               tagline: "\u63DB\u5C0D\u8C61\uFF0C\u751F\u6210\u4E0D\u540C\u7684\u8AAA\u6CD5"
             },
             width: 780,
-            offsetY: -560
+            offsetY: -210
           },
           {
             id: "c6-8",
@@ -8596,7 +8596,7 @@
               footnote: "\u5C31\u8B8A\u6210\u53EF\u4EE5\u9001\u51FA\u53BB\u7684\u5584\u610F"
             },
             width: 780,
-            offsetY: -560
+            offsetY: -210
           },
           {
             id: "c6-9",
@@ -8610,7 +8610,7 @@
               color: "data"
             },
             width: 780,
-            offsetY: -560
+            offsetY: -210
           },
           {
             id: "c6-10",
@@ -8624,7 +8624,7 @@
               color: "special"
             },
             width: 780,
-            offsetY: -560
+            offsetY: -210
           },
           {
             id: "c6-11",
@@ -8638,7 +8638,7 @@
               color: "special"
             },
             width: 780,
-            offsetY: -560
+            offsetY: -210
           },
           {
             id: "c17",
@@ -8652,7 +8652,7 @@
               spreadMs: 1600
             },
             width: 780,
-            offsetY: -560
+            offsetY: -210
           },
           {
             id: "c18-1",
@@ -8703,8 +8703,8 @@
             end: 172686,
             side: "right",
             params: {
-              lines: "\u597D\u597D\u8AAA\u8A71\n\u5148\u5C0D\u81EA\u5DF1\u8AAA\u4E00\u53E5\n\u518D\u628A\u5B83\u9001\u7D66\u5225\u4EBA",
-              highlight: "\u597D\u597D\u8AAA\u8A71",
+              lines: "\u628A\u8A71\n\u597D\u597D\u8AAA\u5B8C",
+              highlight: "\u597D\u597D\u8AAA\u5B8C",
               fontSize: 62,
               color: "accent"
             },

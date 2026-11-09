@@ -36,7 +36,7 @@ CARD_W = 860          # 一般段落卡寬（畫面 73%；左右一致＝視覺�
 CARD_W_DEMO = 780     # demo 段卡寬（讓真實網站畫面仍看得見）
 HEAD_MS = 1200          # 成片 head_pad（= assemble.py head_pad）
 INSET_MS = 150          # 卡窗內縮
-DEMO_OFFSET_Y = -560    # demo 段卡片上移
+DEMO_OFFSET_Y = -210    # demo 段卡片上移（新內容區中心 810 → 600，露出下方真實畫面）
 DEMO_DIM = 0.04   # demo 段幾乎不壓暗：真實網站畫面要清楚（評審要看得出是真的在用）
 NORMAL_DIM = 0.40
 # 個別段落覆寫暗化值：seg2/seg5 都在播「真實截圖」，壓暗要輕（複驗指出 seg5 仍像抽象模板）
@@ -47,10 +47,11 @@ CARD_W_SEG5 = 700     # seg5 卡片略窄，讓背後的好話牆真截圖露出
 # key = timeline idx；value = list of card specs（一個 run 安排多張卡時依序平分 run 視窗）
 PLAN: dict[int, list[dict]] = {
     1: [dict(effect="big-statement", side="left", params=dict(
-        text="搞砸了，第一個念頭是\n「我怎麼這麼沒用」", fontSize=86, color="accent"))],
+        # 不重複旁白字幕的原句（字幕會說「搞砸的時候，第一個念頭總是…」）
+        text="對別人寬容\n對自己最嚴厲", fontSize=86, color="accent"))],
     2: [dict(effect="quote-reveal", side="right", params=dict(
-        lines="換成別人對你說\n你早就生氣了\n對自己說，卻覺得理所當然",
-        highlight="生氣", fontSize=58, color="special"))],
+        lines="同一句話\n換個人說，你會生氣\n對自己說，卻默默收下",
+        highlight="默默收下", fontSize=58, color="special"))],
     # seg2：前半只留一張流程卡（window 0→0.52），後半留白給「全幅真實截圖」
     # （assemble.py 會在 0.54→1.0 插入 S2_rewrite_result / S10_mobile_375_result）
     3: [dict(effect="timeline-milestones", side="left", window=(0.0, 0.52), params=dict(
@@ -62,7 +63,7 @@ PLAN: dict[int, list[dict]] = {
         footnote="也不假裝你的困難不存在"))],
     # ---- demo 段（seg3/seg4）：offsetY 上移、dim 0.12 ----
     6: [dict(effect="big-statement", side="right", params=dict(
-        text="這是真實的網站畫面\n不是簡報", fontSize=66, color="support"))],
+        text="不剪接\n直接操作一次", fontSize=66, color="support"))],
     7: [dict(effect="progress-ring", side="left", params=dict(
         title="心事已送出", percent=100, durMs=900,
         label="不用修飾", sublabel="直接打出來", color="data"))],
@@ -109,8 +110,9 @@ PLAN: dict[int, list[dict]] = {
             color="support")),
     ],
     19: [dict(effect="quote-reveal", side="right", params=dict(
-        lines="好好說話\n先對自己說一句\n再把它送給別人",
-        highlight="好好說話", fontSize=62, color="accent"))],
+        # 不重複旁白字幕（字幕會說「先對自己說一句，再送給別人」）
+        lines="把話\n好好說完",
+        highlight="好好說完", fontSize=62, color="accent"))],
 }
 
 # 段頭板（segs[]）：依 timeline 的 seg 欄位分組，標題/標籤/色固定，時間由段邊界推導

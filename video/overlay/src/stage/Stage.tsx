@@ -13,9 +13,13 @@ export const STAGE_H = 1920
 const SIDE_MARGIN = 44          // 側邊距 90 -> 44px
 const CARD_W_SCALE = 0.92       // 卡寬 x0.92（zoom 縮放，字級跟著縮；太小會被說「窗格太小」）
 const CARD_SCALE_MIN = 0.5      // 高度塞不下時的下限（demo 段卡片才可能吃到）
-const TOP_LIMIT = 12            // 卡片上緣最小留白，避免被切頂
-const CENTER_Y = STAGE_H / 2    // 卡片垂直置中 y=960
-const SUBTITLE_TOP = STAGE_H - 220  // 底部 220px 字幕帶，y>=1700 禁入
+// v12 版面重排：把畫面切成三段，互不侵犯
+//   頂部 0..250    ：段頭板（tag＋標題）專用，卡片一律不得進入
+//   內容 250..1370 ：卡片活動區（中心 810）
+//   字幕 1370..1920：字幕＋收尾網址卡
+const TOP_LIMIT = 250
+const CENTER_Y = 810
+const SUBTITLE_TOP = 1370
 const SEG_LEFT = 48             // 段頭板移到左上
 const SEG_TOP = 110
 
