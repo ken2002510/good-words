@@ -134,9 +134,13 @@ def main() -> int:
         key = RUN_IMG.get(name)
         if key:
             src = find_img(key)
-            prep = TMP / f"prep_{key}.jpg"
-            if not prep.exists():
-                prep_image(src, prep)
+            # 中間檔名帶「來源檔案的 mtime+大小」：來源換了就會重做，
+            # 避免沿用舊快取（實際踩過：改成 10px 模糊後仍用 30px 的舊 prep，
+            # 背景看起來完全沒變，量測才發現）。
+            st = src.stat()
+            stamp = f"{int(st.st_mtime)}_{st.st_size}"
+            prep = TMP / f"prep_{key}_{stamp}.jpg"
+            prep_image(src, prep)
             make_seg_img(prep, dur, out)
             print(f"[gen_bg_img] seg{i:02d} {name} {a:.2f}-{b:.2f} img={src.name}")
         else:
