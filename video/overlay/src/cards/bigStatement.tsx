@@ -9,7 +9,8 @@ function BigStatement({ t, enterAt, exitAt, params }: any) {
   const rise = (1 - easeOutCubic(prog(t, enterAt, 560))) * 30
   const lineP = easeOutCubic(prog(t, enterAt + 260, 700))
   return (
-    <CardShell t={t} enterAt={enterAt} exitAt={exitAt} style={{ padding: '10px 6px' }}>
+    // 不覆寫 padding：原本 style padding '10px 6px' 讓文字離左框只剩 8–9px（§26 退回等級）
+    <CardShell t={t} enterAt={enterAt} exitAt={exitAt}>
       <div style={{
         fontSize: Number(params.fontSize ?? 78), fontWeight: 650,
         lineHeight: 1.35, letterSpacing: '1px',
@@ -21,7 +22,7 @@ function BigStatement({ t, enterAt, exitAt, params }: any) {
       </div>
       <div style={{
         height: 3, borderRadius: 2, marginTop: 18,
-        width: `${lineP * 100}%`,
+        width: `${lineP * 84}%`,   // 底線不要頂到卡片左右邊界
         background: `color-mix(in srgb, var(--c-${params.color}) 65%, transparent)`,
       }} />
     </CardShell>

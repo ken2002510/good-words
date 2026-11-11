@@ -92,8 +92,10 @@ PLAN: dict[int, list[dict]] = {
     16: [dict(effect="stat-board", side="right", params=dict(
         title="求助資源",
         stats="1925:安心專線\n1995:生命線\n1980:張老師\n底線:AI 不當諮商師", color="special"))],
+    # 四給：保留時間軸卡（lint R4 要求圖形卡 ≥50%），但標籤縮短成 3–4 字，
+    # 讓 4 欄都放得下（原本 11 字標籤會折行溢出卡片框 7px，§26 退回等級）
     17: [dict(effect="timeline-milestones", side="left", params=dict(
-        items="說好話・核心\n做好事・轉送\n存好心・不評價\n信心・歡喜・希望・方便",
+        items="說好話\n做好事\n存好心\n給信心",
         color="data", spreadMs=1600))],
     # ---- seg5（tech，現在是講好話牆）：三張卡平分該段 ----
     18: [

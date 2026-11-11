@@ -7789,7 +7789,7 @@
     const fade = outFade(t, exitAt);
     const n = nodes.length;
     const dotR = 9;
-    return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(CardShell, { t, enterAt, exitAt, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { style: { position: "relative", height: 150, paddingTop: 30 }, children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(CardShell, { t, enterAt, exitAt, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { style: { position: "relative", minHeight: 150, paddingTop: 30, paddingBottom: 14 }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: {
         position: "absolute",
         top: 39 + dotR - 1,
@@ -7818,7 +7818,14 @@
             border: `2px solid var(--c-${params.color})`,
             background: `color-mix(in srgb, var(--c-${params.color}) ${Math.round(p * 85)}%, transparent)`
           } }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { fontSize: 34, color: "var(--c-text)", textAlign: "center", lineHeight: 1.35 }, children: label })
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: {
+            fontSize: 28,
+            color: "var(--c-text)",
+            textAlign: "center",
+            lineHeight: 1.35,
+            padding: "0 8px",
+            overflowWrap: "anywhere"
+          }, children: label })
         ] }, i);
       }) })
     ] }) });
@@ -7911,24 +7918,28 @@
     const a = clamp01(prog(t, enterAt + 80, 520)) * fade;
     const rise = (1 - easeOutCubic(prog(t, enterAt, 560))) * 30;
     const lineP = easeOutCubic(prog(t, enterAt + 260, 700));
-    return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(CardShell, { t, enterAt, exitAt, style: { padding: "10px 6px" }, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { style: {
-        fontSize: Number(params.fontSize ?? 78),
-        fontWeight: 650,
-        lineHeight: 1.35,
-        letterSpacing: "1px",
-        color: `var(--c-${params.color})`,
-        opacity: a,
-        transform: `translateY(${rise * 0.3}px)`
-      }, children: params.text }),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { style: {
-        height: 3,
-        borderRadius: 2,
-        marginTop: 18,
-        width: `${lineP * 100}%`,
-        background: `color-mix(in srgb, var(--c-${params.color}) 65%, transparent)`
-      } })
-    ] });
+    return (
+      // 不覆寫 padding：原本 style padding '10px 6px' 讓文字離左框只剩 8–9px（§26 退回等級）
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(CardShell, { t, enterAt, exitAt, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { style: {
+          fontSize: Number(params.fontSize ?? 78),
+          fontWeight: 650,
+          lineHeight: 1.35,
+          letterSpacing: "1px",
+          color: `var(--c-${params.color})`,
+          opacity: a,
+          transform: `translateY(${rise * 0.3}px)`
+        }, children: params.text }),
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { style: {
+          height: 3,
+          borderRadius: 2,
+          marginTop: 18,
+          width: `${lineP * 84}%`,
+          // 底線不要頂到卡片左右邊界
+          background: `color-mix(in srgb, var(--c-${params.color}) 65%, transparent)`
+        } })
+      ] })
+    );
   }
   var import_jsx_runtime10, bigStatement;
   var init_bigStatement = __esm({
@@ -8647,7 +8658,7 @@
             end: 142178,
             side: "left",
             params: {
-              items: "\u8AAA\u597D\u8A71\u30FB\u6838\u5FC3\n\u505A\u597D\u4E8B\u30FB\u8F49\u9001\n\u5B58\u597D\u5FC3\u30FB\u4E0D\u8A55\u50F9\n\u4FE1\u5FC3\u30FB\u6B61\u559C\u30FB\u5E0C\u671B\u30FB\u65B9\u4FBF",
+              items: "\u8AAA\u597D\u8A71\n\u505A\u597D\u4E8B\n\u5B58\u597D\u5FC3\n\u7D66\u4FE1\u5FC3",
               color: "data",
               spreadMs: 1600
             },

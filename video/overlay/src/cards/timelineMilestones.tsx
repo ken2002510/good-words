@@ -10,7 +10,8 @@ function TimelineMilestones({ t, enterAt, exitAt, params }: any) {
   const dotR = 9
   return (
     <CardShell t={t} enterAt={enterAt} exitAt={exitAt}>
-      <div style={{ position: 'relative', height: 150, paddingTop: 30 }}>
+      {/* §26：高度不可寫死。原 height:150 在標籤折行時會讓文字溢出卡片框（實測超出 7px） */}
+      <div style={{ position: 'relative', minHeight: 150, paddingTop: 30, paddingBottom: 14 }}>
         {/* 主軸線從左向右生長 */}
         <div style={{
           position: 'absolute', top: 39 + dotR - 1, left: 0,
@@ -34,7 +35,10 @@ function TimelineMilestones({ t, enterAt, exitAt, params }: any) {
                   border: `2px solid var(--c-${params.color})`,
                   background: `color-mix(in srgb, var(--c-${params.color}) ${Math.round(p * 85)}%, transparent)`,
                 }} />
-                <div style={{ fontSize: 34, color: 'var(--c-text)', textAlign: 'center', lineHeight: 1.35 }}>{label}</div>
+                <div style={{
+                  fontSize: 28, color: 'var(--c-text)', textAlign: 'center',
+                  lineHeight: 1.35, padding: '0 8px', overflowWrap: 'anywhere',
+                }}>{label}</div>
               </div>
             )
           })}

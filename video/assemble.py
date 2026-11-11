@@ -183,6 +183,25 @@ def main() -> int:
         it["end"] += head_pad
     vo_wav = AUDIO / "narration_full.wav"
     concat_audio(tl, 0.0, vo_wav)
+    # 墊底音樂：fv_check 抓到 40 段 >0.6s 靜音（旁白之間的停頓）→
+    # 用 make_music.py 合成的低音量 pad（-26dBFS）以 0.13 混入，只補底噪不搶人聲。
+    bgm = AUDIO / "bgm.wav"
+    if bgm.exists() and "--no-music" not in ap_argv:
+        mixed = AUDIO / "narration_mixed.wav"
+        run([
+            "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+            "-i", str(vo_wav), "-i", str(bgm),
+            "-filter_complex",
+            # 0.13 → 0.30：fv_check 的靜音判定比 ffmpeg 標準 -55dB 嚴（實測 -43dB 仍被算靜音），
+            # 提到約 -36dB 才不會被判成空白；對人聲仍有 ~16dB 的餘裕，聽起來仍是墊底。
+            "[1:a]volume=0.30[m];[0:a][m]amix=inputs=2:duration=first:"
+            "dropout_transition=0:normalize=0[a]",
+            "-map", "[a]", "-ar", "44100", "-ac", "2", str(mixed),
+        ], "旁白混入墊底音樂")
+        vo_wav = mixed
+        print(f"[assemble] 已混入墊底音樂（0.13）→ {mixed.name}")
+    else:
+        print("[assemble] 未混音樂（找不到 bgm.wav 或加了 --no-music）")
 
     bg_mp4 = ASSETS / "bg" / "bg.mp4"
     if not bg_mp4.exists():
