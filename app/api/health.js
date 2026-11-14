@@ -18,9 +18,13 @@ const bundleState = bundle.prepare();
 const handler = require('../../deploy/api/health.js');
 
 /**
- * 包一層：在原本的 health 回應上附加 bundle 診斷。
- * 這樣部署後只要打 /api/health，就能知道「雲端打包有沒有把資源帶上來」，
- * 不必去翻 Vercel log。
+ * 包一層：在原本的 health 回應上附加**最小**的打包診斷。
+ *
+ * ★ 2026-11 評審 P1-3：這裡原本會回 `libLoaded`（載入了哪些模組）與 `contentDir`，
+ *   等於告訴攻擊者「這個服務有哪些模組、關鍵字黑名單叫什麼名字」——那是白送的攻擊地圖。
+ *   現在只保留「打包有沒有成功」與「帶上幾個內容檔」這兩個不含名稱的訊號：
+ *     deploy.bundle = { prepared, contentFiles:<數字>, failed:<bool> }
+ *   要更細的診斷請看 Vercel log，不要放在公開端點上。
  */
 module.exports = (req, res) => {
   const origJson = res.json.bind(res);
@@ -30,10 +34,8 @@ module.exports = (req, res) => {
         payload.deploy = payload.deploy || {};
         payload.deploy.bundle = {
           prepared: true,
-          contentDir: bundleState.contentDir ? 'set (tmp)' : null,
-          contentFiles: bundleState.contentFiles,
-          libLoaded: bundleState.libLoaded,
-          error: bundleState.error,
+          contentFiles: Number(bundleState.contentFiles) || 0,
+          failed: Boolean(bundleState.error),
         };
       }
     } catch (_) {
