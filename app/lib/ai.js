@@ -36,8 +36,10 @@ const NVIDIA_URL = process.env.NVIDIA_API_URL || 'https://integrate.api.nvidia.c
 // 預設模型：實測選定（qa/_nv_bench.mjs v2，2026-11-04：bolt-e4b 4/4 PASS、avg 1.2s，
 // 遠低於 Vercel 6.5s 預算）；可用 NVIDIA_MODEL 覆寫
 const NVIDIA_MODEL = process.env.NVIDIA_MODEL || 'nvidia/nemotron-3.5-bolt-e4b';
-// Vercel Hobby function 上限 10s（vercel.json maxDuration），預算內要留餘裕給降級
-const NVIDIA_TIMEOUT_MS = Number(process.env.NVIDIA_TIMEOUT_MS || 6500);
+// Vercel Hobby function 上限 10s（vercel.json maxDuration），預算內要留餘裕給降級。
+// 2026-11 評審 P1-3：原本 6500ms。實測 NVIDIA 軌 P95 約 1.6s、8 併發 1.65s，
+// 6.5 秒只是讓「真的壞掉時」的使用者多空等 5 秒 → 降到 2500ms（可用 env 覆寫）。
+const NVIDIA_TIMEOUT_MS = Number(process.env.NVIDIA_TIMEOUT_MS || 2500);
 
 /** 允許強制指定引擎（測試用）：AI_ENGINE=rules|ollama|nvidia|cloud|auto */
 const FORCED = (process.env.AI_ENGINE || 'auto').toLowerCase();

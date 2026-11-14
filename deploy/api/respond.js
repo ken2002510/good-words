@@ -23,10 +23,30 @@
  *   無 key 時走規則軌（毫秒級）。不論哪一軌，總預算內都會 race 回規則式，避免 504。
  */
 
+const crypto = require('crypto');
 const { loadLib } = require('../lib/resolve.js');
 
 const MAX_TEXT = 4000;
 const FUNCTION_BUDGET_MS = 8000; // 留 2 秒給 Vercel 收尾，避免 504
+
+/**
+ * 每來源每小時的回應次數上限（2026-11 評審 P1-3）。
+ *
+ * 為什麼需要：應用層原本完全沒有 per-user 配額，任何單一來源都能連續打，
+ * 把 NVIDIA NIM 的免費額度吃光，整站就退化成規則式罐頭（其他使用者受害）。
+ * 預設 40 次/小時（正常使用遠低於此）；可用 env RESP_PER_HOUR 調整。
+ * KV 未設定或讀寫失敗時**不阻擋**（寧可少一層保護，也不要讓服務掛掉）。
+ */
+const RESP_PER_HOUR = Number(process.env.RESP_PER_HOUR || 40);
+
+/** 取來源識別：優先用前端帶的 anon，否則用 Vercel 的 x-forwarded-for 第一段 */
+function sourceId(req, payload) {
+  const anon = payload && payload.anon ? String(payload.anon) : '';
+  const xff = String((req && req.headers && (req.headers['x-forwarded-for'] || req.headers['X-Forwarded-For'])) || '');
+  const ip = xff.split(',')[0].trim();
+  const raw = anon || ip || 'unknown';
+  return crypto.createHash('sha256').update(raw).digest('hex').slice(0, 16);
+}
 
 /**
  * 部署環境要走哪一軌？
@@ -128,6 +148,26 @@ module.exports = async (req, res) => {
   // 模式：chat（預設）| rewrite（毒話改寫）；歷史由前端帶來，後端消毒後原樣轉發給模型軌
   const mode = payload && payload.mode === 'rewrite' ? 'rewrite' : 'chat';
   const history = Array.isArray(payload && payload.history) ? payload.history : undefined;
+
+  // ── 每來源每小時上限（P1-3）：保護免費 LLM 額度，避免單一來源把全站打成罐頭 ──
+  try {
+    const kv = loadLib('kv').mod;
+    if (kv && typeof kv.enabled === 'function' && kv.enabled()) {
+      // 以台北時間的小時桶計數
+      const hour = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 13);
+      const rk = 'rate:resp:' + sourceId(req, payload) + ':' + hour;
+      const n = await kv.incr(rk);
+      if (n === 1) await kv.expire(rk, 2 * 3600);
+      if (n > RESP_PER_HOUR) {
+        res.setHeader('Retry-After', '600');
+        return res.status(429).json({
+          error: '這一小時用得有點多，休息一下再回來（每小時上限 ' + RESP_PER_HOUR + ' 次）。',
+        });
+      }
+    }
+  } catch (_) {
+    // KV 不可用 → 不阻擋（服務可用性優先）
+  }
 
   // ════════════════════════════════════════════════════════════
   // 主路徑
