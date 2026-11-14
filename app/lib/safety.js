@@ -107,6 +107,42 @@ const STRONG_OVERRIDE = [
   /我是負擔/, /我是拖累/, /我不配活著/, /我該死/, /想消失/, /一了百了/, /結束生命/, /結束自己/,
 ];
 
+// ─────────────────────────────────────────────────────────────
+// 組合式風險（2026-11 評審 P0-2）
+//
+// 實測：「我已經想好方法了，也知道時間」——自殺風險評估中最高危險等級的表述
+// （已有方法＋已有時間計畫）——被判為 crisis:false，回一般好話、零熱線資源；
+// 而「我買了炭」卻能攔截。原因是純關鍵字黑名單，缺少「計畫／方法／時間」的組合判斷。
+//
+// 這裡補上組合規則（全部在正規化後的文字上比對）：
+//   R1 計畫 ∧ 方法 ∧ 時間        → 危機
+//   R2 計畫 ∧ 方法 ∧ 低落語境     → 危機
+//   R3 致命手段 ∧ (計畫 ∨ 時間)   → 危機
+//   R4 計畫 ∧ 時間 ∧ 低落語境     → 危機
+// 刻意不讓「想好方法」單獨成立（「終於想好方法了，工作有救了」不該被轉介）。
+// ─────────────────────────────────────────────────────────────
+
+const PLAN_WORDS = ['想好', '想清楚', '決定好', '計畫好', '計劃好', '安排好', '準備好', '選好', '找好', '下定決心'];
+const METHOD_WORDS = ['方法', '方式', '辦法', '手段', '工具', '途徑'];
+const LETHAL_MEANS = ['炭', '木炭', '繩子', '繩', '刀', '利器', '美工刀', '藥', '安眠藥', '窗', '頂樓', '樓頂', '高處', '海邊', '橋', '燒'];
+const TIME_WORDS = ['時間', '今晚', '今天晚上', '明天', '後天', '這週', '下週', '下個月', '某天', '日期', '時機', '幾點', '半夜', '凌晨', '最後一天'];
+const DISTRESS_WORDS = ['不想活', '活不下去', '撐不', '撐不住', '痛苦', '難受', '絕望', '沒希望', '沒有希望', '想消失', '想死', '死', '再見', '道別', '解脫', '結束', '負擔', '拖累', '沒意義'];
+
+const hasAny = (n, list) => list.filter((w) => n.includes(w));
+
+function comboRisk(n) {
+  const plan = hasAny(n, PLAN_WORDS);
+  const method = hasAny(n, METHOD_WORDS);
+  const lethal = hasAny(n, LETHAL_MEANS);
+  const time = hasAny(n, TIME_WORDS);
+  const distress = hasAny(n, DISTRESS_WORDS);
+  if (plan.length && method.length && time.length) return '計畫+方法+時間';
+  if (plan.length && method.length && distress.length) return '計畫+方法+低落語境';
+  if (lethal.length && (plan.length || time.length)) return '致命手段+計畫或時間';
+  if (plan.length && time.length && distress.length) return '計畫+時間+低落語境';
+  return null;
+}
+
 /** 正規化：對齊 content/crisis.json 的 normalize 規格 */
 function normalize(text) {
   return String(text || '')
@@ -226,8 +262,17 @@ function detectCrisis(text) {
     if (m && !matched.includes(m[0])) matched.push(m[0]);
   }
 
-  // 2) 英文 pattern（比對原文與小寫原文）
-  const lowerRaw = raw.toLowerCase();
+  // 1.5) 組合式風險（方法／時間／計畫／手段）——見上方 comboRisk 說明
+  const combo = comboRisk(n);
+  if (combo) matched.push(combo);
+
+  // 2) 英文 pattern（比對「遮掉 email/網址後」的原文）
+  //    評審實測：含 email 的貼文被誤判 crisis —— 因為 email 內的英文字元被英文 pattern 命中。
+  //    先把 email/網址換成空白，再做英文比對，誤判就不會發生。
+  const maskedRaw = raw
+    .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, ' ')
+    .replace(/https?:\/\/\S+|www\.\S+/g, ' ');
+  const lowerRaw = maskedRaw.toLowerCase();
   for (const re of BUILTIN_LATIN) {
     const m = lowerRaw.match(re);
     if (m) matched.push(m[0]);
@@ -239,8 +284,18 @@ function detectCrisis(text) {
 
   if (!matched.length) return { crisis: false, matched: [] };
 
+  // 2.5) 「你去死」這類**針對他人**的辱罵 → 不是危機，交給攻擊字過濾處理
+  //      （評審實測：辱罵句被誤判 crisis:true，沒能給出正確的「不要罵人」訊息）
+  const onlyDeathFamily = matched.every((m) => /死/.test(m));
+  if (onlyDeathFamily && /(你|妳|您|你們)(就)?(去)?死/.test(n)) {
+    return { crisis: false, matched: [], directedAttack: true };
+  }
+
   // 3) 口語誇飾 guard：命中且沒有強訊號覆蓋 → 不轉介
-  const strongHit = STRONG_OVERRIDE.some((re) => re.test(n)) || extraLatin.some((re) => re.test(lowerRaw));
+  //    組合式風險（combo）本身即為強訊號，不可被「累死／笑死」這類 guard 抵銷。
+  const strongHit = !!combo
+    || STRONG_OVERRIDE.some((re) => re.test(n))
+    || extraLatin.some((re) => re.test(lowerRaw));
   if (!strongHit) {
     const joke = NEGATIVE_GUARD.find((re) => re.test(n));
     if (joke) return { crisis: false, matched: [], guarded: true, guardHit: String(joke) };
@@ -268,6 +323,7 @@ module.exports = {
   detectCrisis,
   crisisResponse,
   normalize,
+  comboRisk,
   reload,
   get loadedInfo() { return loadedInfo; },
   get RESOURCES() { return RESOURCES; },

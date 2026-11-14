@@ -19,12 +19,83 @@
 const rules = require('./rules.js');
 const safety = require('./safety.js');
 
-// ── 個資 pattern（貼文與鼓勵都用）──
+// ─────────────────────────────────────────────────────────────
+// 個資偵測（貼文與鼓勵共用）
+//
+// 2026-11 評審實測：9 項 PII 只有 1 項被擋，且 8 種變體全部繞過
+// （全形數字 ０９１２…、插空白 0912 345 678、插橫線、諧音「零九一二…」、
+//   全形身分證 Ａ１２３…、空白身分證、全形 LINE ID、地址省略市名）。
+// 根因：沒有 Unicode NFKC 正規化、沒有去分隔符、沒有處理諧音，規則也只認手機。
+//
+// 修法：偵測前先把文字轉成三種「偵測視圖」，再跑各自適用的規則：
+//   plain      = NFKC 全形轉半形 + 去不可見字元 + 小寫
+//   compact    = plain 再去掉空白/橫線/標點等分隔符
+//   homophone  = compact 再把中文數字諧音轉成阿拉伯數字（零九一二 → 0912）
+// 顯示與儲存仍用使用者原文，只有偵測用視圖被正規化。
+// ─────────────────────────────────────────────────────────────
+
+const INVISIBLE_RE = /[\u200B-\u200F\u202A-\u202E\u2060\uFEFF]/g;
+const SEPARATOR_RE = /[\s\u3000\-_—–~～.。·•,，、;；:：/\\|()（）\[\]【】{}<>《》「」『』"'`+]/g;
+
+const HOMOPHONE_DIGIT = {
+  零: '0', 〇: '0', 洞: '0',
+  一: '1', 么: '1', 壹: '1',
+  二: '2', 兩: '2', 貳: '2',
+  三: '3', 參: '3', 叁: '3',
+  四: '4', 肆: '4',
+  五: '5', 伍: '5',
+  六: '6', 陸: '6',
+  七: '7', 柒: '7', 拐: '7',
+  八: '8', 捌: '8',
+  九: '9', 玖: '9', 勾: '9',
+};
+
+/** 偵測視圖（NFKC + 去不可見字元 + 小寫） */
+function screenPlain(text) {
+  return String(text || '').normalize('NFKC').replace(INVISIBLE_RE, '').toLowerCase();
+}
+
+/** 再去除分隔符（空白、橫線、標點…）——「0912 345 678」→「0912345678」 */
+function screenCompact(text) {
+  return screenPlain(text).replace(SEPARATOR_RE, '');
+}
+
+/** 再把中文數字諧音轉成阿拉伯數字——「零九一二…」→「0912…」 */
+function screenHomophone(text) {
+  return screenCompact(text).replace(/[零〇洞一么壹二兩貳三參叁四肆五伍六陸七柒拐八捌九玖勾]/g,
+    (c) => HOMOPHONE_DIGIT[c] || c);
+}
+
+/** 「我是說真的」這類不是姓名的接續詞，避免姓名規則誤判 */
+const NON_NAME_AFTER_INTRO = new Set([
+  '說真', '說真', '想說', '覺得', '因為', '真的', '不是', '一個', '那種', '這樣', '有點',
+  '想要', '需要', '現在', '今天', '昨天', '明天', '很累', '好累', '不好', '沒用', '誰', '你', '我', '他', '她',
+]);
+
 const PII_PATTERNS = [
-  { re: /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/, label: 'email' },
-  { re: /(?<![\d.])(?:09\d{8}|0\d{1,2}-?\d{6,8}|\+886\s?\d{9})(?![\d.])/, label: '電話' },
-  { re: /https?:\/\/|www\.|\.(com|tw|net|org|io|me|shop|club)\b/i, label: '網址' },
-  { re: /@[A-Za-z0-9._]{3,30}\b/, label: '@帳號' },
+  { label: 'email', on: 'plain', re: /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/ },
+  // 手機（含 +886 9xxxxxxxx）與市話：在 compact 上比對，可擋插空白／橫線／全形
+  { label: '電話', on: 'compact', re: /(?:^|[^0-9])(?:09\d{8}|\+?8869\d{8})(?![0-9])/ },
+  { label: '市話', on: 'compact', re: /(?:^|[^0-9])0[2-8]\d{7,8}(?![0-9])/ },
+  // 身分證：一個英文字母 + 1/2 + 8 位數字（全形已在 NFKC 轉掉、空白已去）
+  { label: '身分證', on: 'compact', re: /(?:^|[^a-z0-9])[a-z][12]\d{8}(?![0-9])/ },
+  // 諧音數字（零九一二…／ㄧ二三四…）——只在 homophone 視圖上比對數字型規則
+  { label: '電話（諧音）', on: 'homophone', re: /(?:^|[^0-9])(?:09\d{8})(?![0-9])/ },
+  { label: '身分證（諧音）', on: 'homophone', re: /(?:^|[^a-z0-9])[a-z][12]\d{8}(?![0-9])/ },
+  { label: '網址', on: 'plain', re: /https?:\/\/|www\.|\.(com|tw|net|org|io|me|shop|club)\b/ },
+  { label: '@帳號', on: 'compact', re: /(?:^|[^a-z0-9._%+-])@[a-z0-9._-]{3,30}/ },
+  { label: 'LINE ID', on: 'plain', re: /(?:line|賴|lineid|line_id)\s*(?:id)?\s*[:：=]?\s*[a-z0-9._-]{4,}/ },
+  // 地址：縣市＋區＋路街（也涵蓋「省略市名」的大安區復興南路…）
+  { label: '地址', on: 'compact', re: /[\u4e00-\u9fff]{2,4}(?:縣|市)[\u4e00-\u9fff]{1,4}(?:區|鄉|鎮|市)[\u4e00-\u9fff0-9]{0,18}(?:路|街|巷|弄|號|樓)/ },
+  { label: '地址', on: 'compact', re: /[\u4e00-\u9fff]{1,4}(?:區|鄉|鎮)[\u4e00-\u9fff0-9]{0,10}(?:路|街|巷|弄)[\u4e00-\u9fff0-9]{0,12}(?:段|號|樓)/ },
+  { label: '學校', on: 'compact', re: /[\u4e00-\u9fff]{2,10}(?:大學|學院|高中|高職|國中|國小|附中|專科)/ },
+  { label: '班級', on: 'compact', re: /[\u4e00-\u9fff]{1,3}年[\d一二三四五六七八九十]{1,3}班/ },
+  {
+    label: '姓名',
+    on: 'plain',
+    re: /(?:我叫|我是|姓名[:：=]?|名字[:：=]?|本名[:：=]?|綽號[:：=]?|大家都叫我)\s*([\u4e00-\u9fff]{2,3})/,
+    accept: (m) => !NON_NAME_AFTER_INTRO.has(String(m[1] || '').slice(0, 2)),
+  },
 ];
 
 // ── 攻擊性謾罵（貼文描述「自己遭受的對待」，不應反過來罵人）──
@@ -89,9 +160,25 @@ function sanitizeItemId(id) {
   return /^[A-Za-z0-9-]{16,64}$/.test(s) ? s : null;
 }
 
-/** 公開顯示的匿名稱呼（只取後 4 碼，不還原原始 ID） */
+/**
+ * 公開顯示的匿名稱呼。
+ *
+ * 2026-11 評審 P1：原本直接取 anon 後 4 碼，**可預測、可冒充**
+ * （anon="spoof-xxxx-I-A1" 就顯示成別人的「牆友#I-A1」，排行榜上「牆友#0001」出現三次）。
+ * 改為 HMAC(anon) 取前 4 碼：對外不可由 anon 反推、不同 anon 幾乎不碰撞。
+ * 需要 env `HANDLE_SECRET`（或 `WALL_ADMIN_TOKEN`）才會生效；
+ * 沒設時退回舊行為，避免在未設定的環境直接壞掉。
+ */
 function anonHandle(anon) {
   const s = String(anon || '');
+  const secret = process.env.HANDLE_SECRET || process.env.WALL_ADMIN_TOKEN || '';
+  if (secret && s) {
+    try {
+      const crypto = require('crypto');
+      const h = crypto.createHmac('sha256', secret).update(s).digest('hex').slice(0, 4).toUpperCase();
+      return '牆友#' + h;
+    } catch (e) { /* 落到下面的舊行為 */ }
+  }
   return '牆友#' + s.slice(-4).toUpperCase();
 }
 
@@ -119,10 +206,22 @@ function rankTitle(rank, pts) {
   return '默默行善';
 }
 
+/**
+ * 個資偵測：把輸入轉成三個偵測視圖後，各自跑對應規則。
+ * 回傳命中的類別字串（例如 '電話'）或 null。
+ * 注意：訊息只回類別，不回傳命中的原文（避免把個資再顯示一次）。
+ */
 function findPII(text) {
+  const plain = screenPlain(text);
+  const compact = screenCompact(text);
+  const homophone = screenHomophone(text);
+  const views = { plain, compact, homophone };
   for (const p of PII_PATTERNS) {
-    const m = String(text || '').match(p.re);
-    if (m) return p.label;
+    const target = views[p.on] || plain;
+    const m = target.match(p.re);
+    if (!m) continue;
+    if (typeof p.accept === 'function' && !p.accept(m)) continue;
+    return p.label;
   }
   return null;
 }
@@ -259,6 +358,9 @@ module.exports = {
   weekKey,
   rankTitle,
   findPII,
+  screenPlain,
+  screenCompact,
+  screenHomophone,
   findAttack,
   validatePost,
   validateEncourage,
