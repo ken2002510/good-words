@@ -1,7 +1,8 @@
 /* ============================================================
    好好說話 — app.js
    零依賴、零追蹤。所有狀態只留在這個瀏覽器裡（localStorage）。
-   沒有任何欄位會蒐集個資。
+   沒有帳號欄位、沒有追蹤碼。掛上好話牆的內容，伺服器會自動過濾明顯的個資，
+   但不保證完全去除——請你不要寫出姓名、就讀的校名或聯絡方式。
    ============================================================ */
 (function () {
   'use strict';
@@ -107,6 +108,14 @@
     el.toast.hidden = false;
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { el.toast.hidden = true; }, 2200);
+  }
+
+  // 系統若開啟「減少動態」，平滑捲動要關掉（WCAG 2.3.3）
+  var motionQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  function reduceMotion() { return !!(motionQuery && motionQuery.matches); }
+  function scrollToNode(node, block) {
+    if (!node || !node.scrollIntoView) return;
+    node.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: block || 'start' });
   }
 
   function copyText(text) {
@@ -288,7 +297,7 @@
     el.result.hidden = true;
     el.crisis.hidden = false;
     el.crisis.focus({ preventScroll: true });
-    el.crisis.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    scrollToNode(el.crisis, 'start');
   }
 
   // ── 一般結果 ──────────────────────────────────────
@@ -353,7 +362,7 @@
     refreshFavButton();
     setTab('friend');
 
-    el.result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    scrollToNode(el.result, 'start');
   }
 
   // ── 送出 ──────────────────────────────────────────
@@ -388,7 +397,7 @@
     el.result.hidden = false;
     el.body.hidden = true;
     el.loading.hidden = false;
-    el.result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    scrollToNode(el.result, 'nearest');
 
     var mi = 0;
     el.loadingText.textContent = LOADING_MSGS[0];
@@ -436,10 +445,11 @@
 
   function setTab(a) {
     audience = a;
+    // 這是一組切換鈕（role=group + aria-pressed），不是 tablist/tab
     Array.prototype.forEach.call(document.querySelectorAll('.seg-tab'), function (b) {
       var on = b.getAttribute('data-audience') === a;
       b.classList.toggle('is-on', on);
-      b.setAttribute('aria-selected', on ? 'true' : 'false');
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
   }
 
@@ -607,7 +617,7 @@
     var open = el.favPanel.hidden;
     el.favPanel.hidden = !open;
     el.btnFav.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if (open) el.favPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (open) scrollToNode(el.favPanel, 'nearest');
   });
 
   el.favPanel.addEventListener('click', function (ev) {
@@ -686,12 +696,16 @@
     el.mePts.textContent = String(lastBoardMe && lastBoardMe.allPts != null ? lastBoardMe.allPts : (p.allPts || 0));
     var weekPts = p.week === wk ? p.weekPts : 0;
     if (lastBoardMe && lastBoardMe.pts != null) weekPts = lastBoardMe.pts;
-    el.meWeekPts.textContent = String(weekPts);
-    var title = '初來報到', rankTxt = '尚未上榜';
-    if (lastBoardMe) {
-      title = lastBoardMe.title || title;
-      rankTxt = lastBoardMe.rank ? ('本週第 ' + lastBoardMe.rank + ' 名') : '尚未上榜';
+    // 0 不是「零分」，是這一週還沒開始 —— 不讓分數讀起來像在評價你這個人
+    if (weekPts > 0) {
+      el.meWeekPts.textContent = String(weekPts);
+      el.meWeekPts.className = 'me-num';
+    } else {
+      el.meWeekPts.textContent = '本週還沒開始';
+      el.meWeekPts.className = 'me-num me-num-empty';
     }
+    var title = '初來報到';
+    if (lastBoardMe) title = lastBoardMe.title || title;
     el.meTitle.textContent = title;
     el.meRank.textContent = lastBoardMe && lastBoardMe.rank ? ('第 ' + lastBoardMe.rank + ' 名') : '—';
     // 記錄列表
@@ -787,9 +801,12 @@
     list.forEach(function (t) {
       var b = document.createElement('button');
       b.type = 'button';
-      b.className = 'filter-chip' + (wallTopic === t.id ? ' is-on' : '');
+      var on = wallTopic === t.id;
+      b.className = 'filter-chip' + (on ? ' is-on' : '');
       b.textContent = t.name;
       b.setAttribute('data-topic', t.id);
+      // 過濾鈕是切換鈕，不是 tab（容器為 role=group）
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
       el.wallFilters.appendChild(b);
     });
   }
@@ -931,7 +948,8 @@
           mine.unshift(j.item);
           saveWallMine(mine);
         }
-        toast('已匿名掛上好話牆 +' + (j.points || 0) + ' 分' + (j.scoreWhy && j.scoreWhy.length ? '（' + j.scoreWhy.join('、') + '）' : ''));
+        // 不對心事計分：掛牆只回一句中性的確認，不報分數
+        toast('已匿名掛上好話牆，等一句好話回來');
         loadWall();
         loadBoard();
         loadMeWall();
@@ -957,7 +975,8 @@
         inputEl.value = '';
         addProfileEvent('enc', j.delta || 0, (j.scoreWhy || []).join('、'));
         if (j.posterDelta) addProfileEvent('encRecv', j.posterDelta, '你的貼文收到鼓勵');
-        toast('鼓勵已掛上 +' + (j.delta || 0) + ' 分' + (j.posterDelta ? '，對方也獲得 +' + j.posterDelta + ' 分' : ''));
+        // 鼓勵別人不強調分數，回到「有一句話送到對方那裡」這件事
+        toast('鼓勵已送到牆上，對方也收到你的鼓勵');
         loadWall();
         loadBoard();
         loadMeWall();

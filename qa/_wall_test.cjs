@@ -138,8 +138,14 @@ async function waitUp(url) {
   ok('空洞好話（無回應到貼文）→ 422', encVague.status === 422, JSON.stringify(encVague.j).slice(0, 100));
   const encShort = await post(B, '/api/encourage', { anon: 'enc-anon-9999zz', itemId, text: '謝謝你' });
   ok('太短的鼓勵（<10字）→ 422', encShort.status === 422, JSON.stringify(encShort.j).slice(0, 100));
+  // 2026-11 評審修正語意：「你去死」是**針對他人**的辱罵，不是危機。
+  // 舊行為把它當 crisis:true（評審列為誤判），現在應走攻擊字過濾 → 422、crisis 不為 true。
   const encCr = await post(B, '/api/encourage', { anon: 'enc-anon-9999zz', itemId, text: '你去死啦' });
-  ok('危機鼓勵 → crisis:true 不儲存', encCr.j.crisis === true);
+  ok('辱罵型鼓勵 → 422 且不是 crisis（走攻擊字）',
+    encCr.status === 422 && encCr.j.crisis !== true, encCr.status + ' ' + JSON.stringify(encCr.j).slice(0, 100));
+  // 第一人稱的自傷語句仍然必須是危機 → 不儲存、回轉介
+  const encCr2 = await post(B, '/api/encourage', { anon: 'enc-anon-9999zz', itemId, text: '我想死一死算了' });
+  ok('第一人稱自傷鼓勵 → crisis:true 不儲存', encCr2.j.crisis === true, JSON.stringify(encCr2.j).slice(0, 120));
   w = await get(B, '/api/wall');
   ok('違規鼓勵沒進牆（仍 1 句）', w.j.items[0].encs.length === 1);
   const enc404 = await post(B, '/api/encourage', { anon: 'enc-anon-9999zz', itemId: 'nonexistent-id-123456', text: '謝謝你願意把這件事說出來' });

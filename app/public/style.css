@@ -8,11 +8,12 @@
   --bg-soft: #f4ece1;
   --card: #ffffff;
   --ink: #2f2a26;
-  --ink-soft: #6d635a;
-  --ink-faint: #9a9088;
+  --ink-soft: #5b524a;       /* 原本 #6d635a：配合 --ink-faint 調深，保住「次級／提示」兩層次 */
+  --ink-faint: #6f665f;      /* 原本 #9a9088：白卡 3.13:1 / 底色 2.67:1 未達 AA → 實算後調深 */
   --line: #e7ded2;
-  --accent: #b4643c;         /* 陶土橘，溫暖但不甜膩 */
+  --accent: #9c4f2a;         /* 原本 #b4643c：白字按鈕 4.35:1、accent 文字在淺底 3.60:1 未達 AA */
   --accent-soft: #f6e7dd;
+  --on-accent: #ffffff;      /* accent 填色上的文字色（深色模式會換成深色） */
   --good: #7a8b5a;
   --good-soft: #eef2e4;
   --step: #5b7c99;
@@ -32,9 +33,10 @@
     --card: #262321;
     --ink: #f0eae3;
     --ink-soft: #b8aea4;
-    --ink-faint: #8c837a;
+    --ink-faint: #a1978d;    /* 原本 #8c837a：深色卡上 4.20:1 未達 AA → 調亮到 5.45:1 */
     --line: #3a3532;
     --accent: #d98a5e;
+    --on-accent: #2f2a26;    /* 深色模式的 accent 較亮：白字只有 2.71:1，改用深色文字 5.24:1 */
     --accent-soft: #3a2c24;
     --good: #a8bd82;
     --good-soft: #2b3124;
@@ -77,10 +79,20 @@ body {
 
 .skip {
   position: absolute; left: -9999px; top: 0;
-  background: var(--accent); color: #fff; padding: 10px 16px; z-index: 99;
+  background: var(--accent); color: var(--on-accent); padding: 10px 16px; z-index: 99;
   border-radius: 0 0 var(--radius-sm) 0;
 }
 .skip:focus { left: 0; }
+
+/*
+ * 鍵盤焦點：全站統一的 :focus-visible 外框（原本全站 0 筆）。
+ * --ink 對白卡 14.2:1、對底色 12.1:1、深色模式對深色卡 13.1:1，都遠高於 3:1。
+ * 用 2px outline-offset，讓外框落在元件外的底色上，元件自身填色不會吃掉它。
+ */
+:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
 
 /* ── 頁首 ───────────────────────────────────────────── */
 
@@ -118,7 +130,7 @@ body {
 .badge {
   min-width: 20px; height: 20px; padding: 0 6px;
   display: inline-flex; align-items: center; justify-content: center;
-  background: var(--accent); color: #fff;
+  background: var(--accent); color: var(--on-accent);
   font-size: 12px; font-weight: 700; border-radius: 999px; line-height: 1;
 }
 
@@ -166,8 +178,9 @@ textarea {
   transition: border-color .15s, background .15s;
 }
 textarea::placeholder { color: var(--ink-faint); }
+/* 焦點樣式不再寫 outline: none，鍵盤焦點由上面的 :focus-visible 統一提供外框 */
 textarea:focus {
-  outline: none; border-color: var(--accent);
+  border-color: var(--accent);
   background: var(--card);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
@@ -179,6 +192,16 @@ textarea:focus {
 .hint { color: var(--ink-faint); font-size: 13px; margin: 0; }
 .counter { font-variant-numeric: tabular-nums; flex: none; }
 .hint-row { display: inline-flex; align-items: center; gap: 10px; }
+
+/*
+ * 危機資源：打字階段就必須看得到（原本只在送出後、判定為危機時才出現）。
+ * 低調的小字，但 --ink-faint 對白卡 5.61:1、連結色 --accent 5.89:1，都過 4.5:1。
+ */
+.input-crisis {
+  margin: 0 0 14px; font-size: 12.5px; line-height: 1.6; color: var(--ink-faint);
+}
+.input-crisis a { color: var(--accent); font-weight: 700; text-decoration: underline; }
+.input-crisis a:hover { color: var(--ink); }
 
 /* 模式切換：傾訴心事 / 改寫重話 */
 .mode-switch {
@@ -193,7 +216,7 @@ textarea:focus {
 }
 .mode-btn:hover { border-color: var(--accent); color: var(--accent); }
 .mode-btn.is-on {
-  color: #fff; background: var(--accent); border-color: var(--accent);
+  color: var(--on-accent); background: var(--accent); border-color: var(--accent);
 }
 
 .chips {
@@ -215,7 +238,7 @@ textarea:focus {
   width: 100%; min-height: 52px;
   display: inline-flex; align-items: center; justify-content: center; gap: 10px;
   font: inherit; font-size: 17px; font-weight: 700; letter-spacing: .04em;
-  color: #fff; background: var(--accent);
+  color: var(--on-accent); background: var(--accent);
   border: 0; border-radius: var(--radius-sm);
   cursor: pointer; transition: filter .15s, transform .06s;
   padding: 0 18px;
@@ -226,8 +249,8 @@ textarea:focus {
 
 .spinner {
   width: 17px; height: 17px; flex: none;
-  border: 2px solid rgba(255,255,255,.35);
-  border-top-color: #fff; border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--on-accent) 35%, transparent);
+  border-top-color: var(--on-accent); border-radius: 50%;
   animation: spin .7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -327,7 +350,7 @@ textarea:focus {
 .seg-num {
   width: 19px; height: 19px; flex: none;
   display: inline-flex; align-items: center; justify-content: center;
-  font-size: 11px; color: #fff; background: var(--ink-faint); border-radius: 50%;
+  font-size: 11px; color: var(--on-accent); background: var(--ink-faint); border-radius: 50%;
 }
 .seg-good .seg-num { background: var(--good); }
 .seg-step .seg-num { background: var(--step); }
@@ -352,8 +375,8 @@ textarea:focus {
 }
 .act:hover { border-color: var(--accent); color: var(--accent); }
 .act:active { transform: translateY(1px); }
-.act-primary { color: #fff; background: var(--accent); border-color: var(--accent); }
-.act-primary:hover { color: #fff; filter: brightness(1.06); }
+.act-primary { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+.act-primary:hover { color: var(--on-accent); filter: brightness(1.06); }
 .act.is-on { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 
 .engine-note {
@@ -377,7 +400,7 @@ textarea:focus {
   border: 1px solid var(--line); border-radius: 999px; cursor: pointer;
   transition: all .15s;
 }
-.seg-tab.is-on { color: #fff; background: var(--accent); border-color: var(--accent); font-weight: 700; }
+.seg-tab.is-on { color: var(--on-accent); background: var(--accent); border-color: var(--accent); font-weight: 700; }
 
 .share-text {
   margin: 0 0 4px;
@@ -433,6 +456,8 @@ textarea:focus {
 }
 .me-num { font-size: 22px; font-weight: 700; color: var(--ink); }
 .me-num.me-title { font-size: 15px; color: var(--accent); padding-top: 4px; }
+/* 本週分數為 0 時改顯示「本週還沒開始」，不要讓 0 看起來像成績 */
+.me-num.me-num-empty { font-size: 14px; line-height: 1.35; padding-top: 6px; color: var(--ink-soft); }
 .me-label { font-size: 12px; color: var(--ink-faint); }
 .me-history { max-height: 260px; overflow: auto; }
 
@@ -454,7 +479,7 @@ textarea:focus {
   padding: 9px 12px; color: var(--ink);
   background: var(--bg-soft); border: 1px solid var(--line); border-radius: var(--radius-sm);
 }
-.enc-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.enc-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .enc-send { white-space: nowrap; }
 .enc-send:disabled { opacity: .5; cursor: default; }
 
@@ -472,7 +497,7 @@ textarea:focus {
   font-weight: 700; font-size: 13px; color: var(--ink-soft); background: var(--bg-soft);
   border: 1px solid var(--line);
 }
-.board-item:nth-child(1) .board-rank { color: #fff; background: var(--accent); border-color: var(--accent); }
+.board-item:nth-child(1) .board-rank { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
 .board-item:nth-child(2) .board-rank, .board-item:nth-child(3) .board-rank { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 .board-name { font-weight: 700; }
 .board-title { font-size: 12.5px; color: var(--accent); background: var(--accent-soft); padding: 1px 9px; border-radius: 999px; }
@@ -487,7 +512,7 @@ textarea:focus {
   background: var(--bg-soft); border: 1px solid var(--line);
   border-radius: var(--radius-sm); padding: 7px 8px; cursor: pointer;
 }
-.topic-pick select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.topic-pick select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 
 .wall-filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 0; }
 .filter-chip {
@@ -496,7 +521,7 @@ textarea:focus {
   border: 1px solid var(--line); border-radius: 999px; cursor: pointer;
 }
 .filter-chip:hover { border-color: var(--accent); color: var(--accent); }
-.filter-chip.is-on { color: #fff; background: var(--accent); border-color: var(--accent); }
+.filter-chip.is-on { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
 
 .wall-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .topic-tag {

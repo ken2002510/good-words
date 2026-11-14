@@ -31,7 +31,7 @@
   <!-- ① 輸入區 -->
   <section class="card intro" id="write">
     <h2 class="intro-title">把心裡的話寫下來，不用修飾。</h2>
-    <p class="intro-sub">寫錯字沒關係、講不清楚也沒關係。<strong>不會被評價；對話只留在你的瀏覽器，不會被伺服器記錄。</strong></p>
+    <p class="intro-sub">寫錯字沒關係、講不清楚也沒關係。<strong>AI 不會評價你寫的內容；對話只留在你的瀏覽器，不會被伺服器記錄。</strong></p>
 
     <form id="form" autocomplete="off">
       <div class="mode-switch" role="group" aria-label="選擇模式">
@@ -51,6 +51,11 @@
           <span id="counter" class="hint counter">0 / 2000</span>
         </span>
       </div>
+
+      <!-- 危機資源：打字階段就要看得到，不能等送出後才出現 -->
+      <p id="input-crisis" class="input-crisis">
+        如果你或身邊的人有立即危險，請直接撥 <a href="tel:1925">1925</a>（24 小時免付費）或 <a href="tel:119">119</a>。
+      </p>
 
       <div class="chips" role="group" aria-label="不知道怎麼開始？試試這些">
         <span class="chips-label">不知道怎麼開始：</span>
@@ -149,10 +154,11 @@
     <!-- 轉送面板 -->
     <div id="share-panel" class="share-panel" hidden>
       <h3 class="share-title">把這句話，送給一個你想到的人</h3>
-      <div class="seg-tabs" role="tablist" aria-label="收件對象">
-        <button role="tab" class="seg-tab is-on" data-audience="friend" aria-selected="true">給朋友</button>
-        <button role="tab" class="seg-tab" data-audience="family" aria-selected="false">給家人</button>
-        <button role="tab" class="seg-tab" data-audience="colleague" aria-selected="false">給同事</button>
+      <!-- 只是一組切換鈕，不是 tablist（沒有對應的 tabpanel），改用 group + aria-pressed -->
+      <div class="seg-tabs" role="group" aria-label="收件對象">
+        <button type="button" class="seg-tab is-on" data-audience="friend" aria-pressed="true">給朋友</button>
+        <button type="button" class="seg-tab" data-audience="family" aria-pressed="false">給家人</button>
+        <button type="button" class="seg-tab" data-audience="colleague" aria-pressed="false">給同事</button>
       </div>
       <pre id="share-text" class="share-text"></pre>
       <div class="actions">
@@ -182,10 +188,11 @@
     </div>
     <div class="me-stats">
       <div class="me-stat"><span class="me-num" id="me-pts">0</span><span class="me-label">總分</span></div>
-      <div class="me-stat"><span class="me-num" id="me-week-pts">0</span><span class="me-label" id="me-week-label">本週分數</span></div>
+      <div class="me-stat"><span class="me-num me-num-empty" id="me-week-pts">本週還沒開始</span><span class="me-label" id="me-week-label">本週分數</span></div>
       <div class="me-stat"><span class="me-num me-title" id="me-title">初來報到</span><span class="me-label">本週稱號</span></div>
       <div class="me-stat"><span class="me-num" id="me-rank" style="font-size:15px;padding-top:4px">—</span><span class="me-label">本週排名</span></div>
     </div>
+    <p class="hint">分數來自你給別人的鼓勵，不是你的心事被評價。</p>
     <ul id="me-history" class="fav-list me-history"></ul>
     <p id="me-empty" class="hint">還沒有紀錄。把事情匿名掛上好話牆、或鼓勵別人，就會開始累積分數。</p>
     <h3 class="me-subtitle">我的牆上貼文 <span class="hint">（別人留給你的鼓勵）</span></h3>
@@ -197,9 +204,9 @@
   <!-- ⑥ 好話牆（匿名公開） -->
   <section id="wall-section" class="card wall-section" aria-label="好話牆">
     <h2 class="fav-title">好話牆 · 匿名分享</h2>
-    <p class="hint">把你遇到的事匿名掛上來：AI 會先回應一輪，然後別人可以留下一句<strong>經 AI 審核</strong>的鼓勵話。內容不含帳號與個資；有危機訊號的內容永遠不會被公開。</p>
+    <p class="hint">把你遇到的事匿名掛上來：AI 會先回應一輪，然後別人可以留下一句<strong>經 AI 審核</strong>的鼓勵話。我們會自動過濾明顯的個資，但請你不要把姓名、就讀的校名或聯絡方式寫出來；有危機訊號的內容永遠不會被公開。</p>
     <p id="wall-status" class="hint"></p>
-    <div id="wall-filters" class="wall-filters" role="tablist" aria-label="依主題過濾"></div>
+    <div id="wall-filters" class="wall-filters" role="group" aria-label="依主題過濾"></div>
     <ul id="wall-list" class="wall-list"></ul>
     <p id="wall-empty" class="hint">牆上還沒有東西。在上面寫下你的事，拿到回應後按「📌 匿名掛上好話牆」。</p>
   </section>
@@ -220,8 +227,9 @@
       * 本機版本：心事只送到你自己電腦上的 AI 模型處理，完全不上傳。
       線上版本：你送出的文字會送到雲端 AI 推論服務，僅用於產生這一次回應，
       不會被保存、不會用於訓練；對話紀錄只留在你的瀏覽器裡，不會上傳。
-      你主動按「匿名掛上好話牆」的內容才會匿名公開（無帳號、經 AI 審核、
-      不含個資與危機內容）；分數與稱號只記錄在你的瀏覽器。
+      你主動按「匿名掛上好話牆」的內容才會匿名公開（無帳號、經 AI 審核；
+      我們會自動過濾明顯的個資，但請你不要把姓名、就讀的校名或聯絡方式寫出來；
+      有危機訊號的內容不會被公開）；分數與稱號只記錄在你的瀏覽器。
     </p>
   </footer>
 

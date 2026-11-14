@@ -3,151 +3,105 @@
 /**
  * GET /api/health — 部署自檢端點（唯讀）
  *
- * ★ 契約對齊：本機 app/server.js 的 /api/health 回傳
- *     { ok, app, time, engines:{ollama,cloud,rules}, content:{dir,source,emotions,goodwordSets,warnings}, recentErrors }
- *   部署版**必須回同一組欄位**，否則：
- *     - 前端若依賴 health 顯示引擎狀態 → 雲端壞掉
- *     - 驗收腳本用同一套判讀邏輯 → 得到假結果
- *   所以這裡以 app/server.js 的形狀為主，再**額外附加**部署診斷欄位（deploy*），
- *   附加欄位不影響既有消費者（向後相容）。
+ * ★ P1-3 修正（2026-11 評審）：先前這個端點會公開
+ *     - app/lib/*.js 的相對路徑（部署內部結構）
+ *     - 每個模組的完整 export 清單（等於把關鍵字黑名單的「名稱」送給攻擊者：
+ *       safety.BUILTIN_PATTERNS / PII_PATTERNS / ATTACK_WORDS …）
+ *   這對一個匿名公開服務是白送的攻擊地圖。現在只回四個欄位：
+ *
+ *     { ok:boolean, engine:string, degraded:boolean, counts:{ 純數字 } }
+ *
+ *   契約（刻意極簡、刻意不含任何名稱）：
+ *     ok       永遠 true（函式有回應本身就代表服務活著）
+ *     engine   目前實際生效的 AI 軌：'rules' | 'nvidia' | 'cloud' | 'ollama' | 'auto'
+ *     degraded true = 有出廠保證的元件正在降級運作（見下方定義）
+ *     counts   只有數字：內容語料數量、牆上篇數、最近錯誤數
+ *
+ *   degraded 的定義（誠實揭露，不美化）：
+ *     engine === 'rules'（沒有雲端 LLM key，走內建規則式）
+ *     || KV 未設定（好話牆停用 → 前端退回本機紀錄）
+ *     || 內容層載入失敗
+ *   任何一項成立就是 true。要判斷「哪一項」請看 engine（AI）與 counts.wallItems
+ *   （牆）；刻意不再回傳檔案路徑、模組名、export 名、pattern 名。
+ *
+ *   注意：本機 app/server.js 有自己的 /api/health（欄位較多，含絕對路徑），
+ *   不在本次修改範圍；Vercel 上的 /api/health 走的是這一支。
  */
 
-const { loadLib, loadContent, appLibDir, contentDir } = require('../lib/resolve.js');
+const { loadLib } = require('../lib/resolve.js');
 
 function safe(fn, fallback = null) {
   try {
     return fn();
-  } catch (err) {
+  } catch (_) {
     return fallback;
   }
 }
 
-module.exports = (req, res) => {
+/** 任何非有限數字一律歸 0，保證 counts 只含數字（不外洩錯誤訊息） */
+function num(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
 
-  const started = Date.now();
+  // ── 引擎（單一事實來源：與 /api/respond、wallcore 用同一個判斷）──
+  const engine = safe(() => require('../lib/wallcore.js').deployForce(), 'rules');
 
-  // ── 取得內容層（優先用 app/lib/data.js，這樣 cloud 與本機判讀完全一致）──
-  let content = null;
-  let contentError = null;
+  // ── KV / 牆 ──
+  let kvOn = false;
+  let wallItems = 0;
+  kvOn = safe(() => loadLib('kv').mod.enabled(), false) === true;
+  if (kvOn) {
+    try {
+      const kv = loadLib('kv').mod;
+      const max = num(safe(() => loadLib('screen').mod.LIMITS.WALL_ITEMS, 60)) || 60;
+      const ids = await kv.lrange('wall:ids', 0, max - 1);
+      wallItems = Array.isArray(ids) ? ids.length : 0;
+    } catch (_) {
+      // KV 有設定但讀不到 → 牆視為降級（不洩漏錯誤內容）
+      wallItems = 0;
+    }
+  }
+
+  // ── 內容層（只取數量）──
+  let contentFailed = false;
+  let emotions = 0;
+  let goodwordSets = 0;
+  let warnings = 0;
   const dataLoad = safe(() => loadLib('data'));
   if (dataLoad && dataLoad.mod && typeof dataLoad.mod.getContent === 'function') {
-    try {
-      content = dataLoad.mod.getContent();
-    } catch (err) {
-      contentError = String((err && err.message) || err);
+    const content = safe(() => dataLoad.mod.getContent(), null);
+    if (!content) {
+      contentFailed = true;
+    } else {
+      emotions = num(content.emotions && content.emotions.length);
+      goodwordSets = num(content.goodwords && Object.keys(content.goodwords).length);
+      warnings = num(content.warnings && content.warnings.length);
     }
   } else {
-    contentError = 'loadLib("data") 失敗或缺少 getContent()';
+    contentFailed = true;
   }
 
-  // 內容層警告（與本機同格式）
-  let warnings = [];
-  if (content && Array.isArray(content.warnings)) {
-    warnings = content.warnings.map((w) => ({ file: w.file, status: w.status, detail: w.detail, action: w.action }));
-  } else {
-    // 內容層完全載不到 → 至少告訴呼叫者每個檔在不在
-    for (const f of ['emotions.json', 'goodwords.json', 'crisis.json', 'share_templates.json']) {
-      const d = safe(() => loadContent(f));
-      warnings.push({ file: f, status: d ? 'ok' : 'missing' });
-    }
-  }
+  const recentErrors = num(safe(() => (loadLib('ai').mod.recentErrors || []).length, 0));
+  if (!kvOn) contentFailed = contentFailed; // 保留可讀性：wall 降級由 engine/degraded 表達
+  const degraded = engine === 'rules' || !kvOn || contentFailed;
 
-  /**
-   * ★ 隱私：一律不輸出「絕對路徑」。
-   *
-   * 原因：/api/health 是公開端點，任何人都能打。
-   * 絕對路徑會洩漏伺服器內部結構（本機是 C:\prodcut\...，Vercel 是 /var/task/...）。
-   * 即使不是個資，也屬於不該給評審看到的內部資訊 —— 而 BRIEF §8 的匿名精神是「從嚴」。
-   *
-   * 做法：只回相對路徑（相對於專案根），拿不到相對路徑就回一個安全標記。
-   * 診斷能力不受影響：相對路徑已足夠判斷「檔案有沒有被部署到正確位置」。
-   */
-  function safeRel(p) {
-    if (!p) return null;
-    const abs = String(p);
-    const roots = [process.cwd(), '/var/task'].filter(Boolean);
-    for (const r of roots) {
-      if (abs === r) return '.';
-      if (abs.startsWith(r + '/') || abs.startsWith(r + '\\')) {
-        return abs.slice(r.length + 1).replace(/\\/g, '/');
-      }
-    }
-    // 認不出根目錄 → 只回最後一層目錄名（例如 "content"），絕不回絕對路徑
-    const parts = abs.replace(/\\/g, '/').split('/').filter(Boolean);
-    return parts.length ? `…/${parts[parts.length - 1]}` : '(unknown)';
-  }
-
-  // ── 額外的部署診斷（不影響上面的契約欄位；只回相對路徑）──
-  const libDiag = {};
-  for (const name of ['rules', 'safety', 'ai', 'data', 'screen', 'kv']) {
-    libDiag[name] = safe(() => {
-      const r = loadLib(name);
-      return { source: safeRel(r.source), snapshot: r.snapshot, exports: Object.keys(r.mod || {}) };
-    }, { error: '載入失敗' });
-  }
-
-  const payload = {
-    // ═══ 與 app/server.js 相同的契約 ═══
+  return res.status(200).json({
     ok: true,
-    app: '好好說話',
-    time: new Date().toISOString(),
-    engines: {
-      // 部署環境**沒有**本機 Ollama：這裡誠實回報 alive:false，不假裝
-      ollama: {
-        url: process.env.OLLAMA_URL || 'http://127.0.0.1:11434',
-        model: process.env.OLLAMA_MODEL || 'qwen3:4b-instruct',
-        alive: false,
-        timeoutMs: Number(process.env.OLLAMA_TIMEOUT_MS || 20000),
-        note: 'Vercel serverless 無法連到本機 Ollama（BRIEF §10）→ 使用規則式引擎',
-      },
-      nvidia: {
-        // ★ 只回「有沒有 key」，絕不回 key 本身
-        enabled: Boolean(process.env.NVIDIA_API_KEY || process.env.NVKEY),
-        model: process.env.NVIDIA_MODEL || 'nvidia/nemotron-3.5-bolt-e4b',
-        timeoutMs: Number(process.env.NVIDIA_TIMEOUT_MS || 6500),
-        note: 'Vercel serverless 走 NVIDIA NIM 雲端 LLM；逾時/無 key 自動降級規則式',
-      },
-      cloud: {
-        enabled: Boolean(process.env.CLOUD_LLM_API_KEY || process.env.OPENAI_API_KEY),
-      },
-      rules: { enabled: true },
-      wall: safe(() => {
-        const kv = loadLib('kv').mod;
-        return {
-          enabled: kv.enabled(),
-          note: kv.enabled()
-            ? '好話牆（匿名公開牆 + 本週排行榜）已啟用，資料存於 Vercel KV'
-            : '好話牆未啟用（尚未連結 Vercel KV）→ 前端降級為本機紀錄，網站照常運作',
-        };
-      }, { enabled: false, note: '無法診斷' }),
+    engine: String(engine || 'rules'),
+    degraded: Boolean(degraded),
+    counts: {
+      wallItems: num(wallItems),
+      contentEmotions: emotions,
+      contentGoodwords: goodwordSets,
+      contentWarnings: warnings,
+      recentErrors,
     },
-    content: {
-      // 只回相對路徑，不洩漏絕對路徑（見上方 safeRel 的說明）
-      dir: safeRel((content && content.contentDir) || contentDir()),
-      source: content && content.usingFallback ? 'builtin-fallback' : 'content-dir',
-      emotions: content && content.emotions ? content.emotions.length : 0,
-      goodwordSets: content && content.goodwords ? Object.keys(content.goodwords).length : 0,
-      warnings,
-    },
-    recentErrors: safe(() => (loadLib('ai').mod.recentErrors || []).slice(-10), []),
-
-    // ═══ 部署診斷（附加，不影響上面的契約；一律只回相對路徑）═══
-    deploy: {
-      runtime: process.version,
-      elapsedMs: Date.now() - started,
-      appLibDir: safeRel(appLibDir()),
-      contentDir: safeRel(contentDir()),
-      contentError,
-      lib: libDiag,
-      forcedEngine: (process.env.DEPLOY_AI_ENGINE || (process.env.NVIDIA_API_KEY || process.env.NVKEY ? 'nvidia' : (process.env.DEPLOY_TRY_OLLAMA === '1' ? 'auto' : 'rules'))),
-      note: (process.env.NVIDIA_API_KEY || process.env.NVKEY)
-        ? '部署版走 NVIDIA NIM 雲端 LLM；逾時或失敗自動降級規則式，保證永遠有回應'
-        : '部署版走規則式引擎；不依賴任何雲端 LLM，保證永遠有回應。設 NVIDIA_API_KEY 後自動升級為雲端 LLM',
-    },
-  };
-
-  res.status(200).json(payload);
+  });
 };
