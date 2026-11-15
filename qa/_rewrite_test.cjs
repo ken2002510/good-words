@@ -86,6 +86,9 @@ server.listen(0, '127.0.0.1', async () => {
     const parts = ai.parseThreeParts(GOOD);
     ok('抓到 改寫 欄位', parts && parts.改寫 === '我這次沒把事情做好，有點挫折，我需要一點時間再試一次。', JSON.stringify(parts));
     ok('好話 相容指向改寫句', parts && parts.好話 === parts.改寫);
+    // 迴歸：承接欄位不可把「改寫：」那行一起吃進去（上線實測抓到）
+    ok('承接沒有吞掉改寫那行', parts && !/改寫/.test(parts.承接) && parts.承接 === '你現在對自己很失望，那個失望是真的。',
+      JSON.stringify(parts && parts.承接));
     const jsonParts = ai.parseThreeParts('{"承接":"a","改寫":"我這次沒做好，需要時間","小步":"b"}');
     ok('JSON 形式的 改寫 也支援', jsonParts && jsonParts.好話 === '我這次沒做好，需要時間', JSON.stringify(jsonParts));
   }

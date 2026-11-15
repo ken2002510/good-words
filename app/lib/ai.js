@@ -198,7 +198,12 @@ function parseThreeParts(raw) {
   // A) 標籤式（全形／半形冒號都吃）
   const grab = (labels) => {
     const alt = labels.join('|');
-    const re = new RegExp(`(?:^|\\n)\\s*(?:[*#\\-•\\d.、\\s]*)(?:${alt})\\s*[:：]\\s*([\\s\\S]*?)(?=\\n\\s*(?:[*#\\-•\\d.、\\s]*)(?:承接|accept|好話|goodword|小步|smallstep|行動|下一步)\\s*[:：]|$)`, 'i');
+    // 終止條件＝下一個標籤；清單必須包含**所有**可能出現的標籤，否則上一個欄位會把
+    // 下一個標籤的內容一起吃進去（實測：改寫模式的「承接」把整行「改寫：…」吞掉）。
+    const re = new RegExp(
+      `(?:^|\\n)\\s*(?:[*#\\-•\\d.、\\s]*)(?:${alt})\\s*[:：]\\s*([\\s\\S]*?)`
+      + `(?=\\n\\s*(?:[*#\\-•\\d.、\\s]*)(?:承接|accept|聽懂|接住|好話|goodword|好話一句|改寫|rewrite|可以這樣說|換句話說|小步|smallstep|小行動|行動|下一步)\\s*[:：]|$)`,
+      'i');
     const m = text.match(re);
     return m ? cleanLine(m[1].replace(/\s*\n\s*/g, ' ')) : '';
   };
