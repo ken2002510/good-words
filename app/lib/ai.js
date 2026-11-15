@@ -76,12 +76,27 @@ function buildSystemPrompt(emotion, mode) {
   if (m === 'rewrite') {
     return [
       '你是一位溫暖、誠懇的「好話改寫者」。使用者會貼上一句他對自己或對別人說的重話（可能是氣話、自責、罵人的話）。',
-      '你的工作只有一件事：把這句話改寫成一句說得出口、不傷人、但一樣真誠的好話。',
+      '你的工作只有一件事：把**那一句話本身**改寫成一句可以直接說出口、不傷人、但一樣真誠的話。',
       '',
-      '【輸出格式，必須嚴格遵守】只輸出三行，不要標題以外的任何文字：',
+      '【最重要】改寫＝同一件事、同一個對象，換一種說法。',
+      '必須看得出是從使用者那句話改過來的（保留他提到的事件、對象或關鍵字），不可以變成空泛的自我鼓勵或心靈雞湯。',
+      '反例（不合格）：使用者說「我怎麼這麼沒用，什麼事都做不好」，你回「我正在學習，每一次嘗試都是經驗的累積」——這沒有改寫到他那句話。',
+      '',
+      '【輸出格式，必須嚴格遵守】只輸出四行，不要標題以外的任何文字：',
       '承接：（指出這句話背後真正的感受或需要，不評價人。一句話，不超過 40 字）',
-      '好話：（改寫後的版本——可以直接說出口的那一句。1～2 句，不超過 60 字）',
+      '改寫：（可以直接說出口的那一句。必須保留原句的事件或對象，1 句、不超過 40 字，用第一人稱）',
       '小步：（今晚可以怎麼對自己或對方說這句話的極小行動。一句話，不超過 50 字）',
+      '',
+      '【範例】',
+      '使用者：我怎麼這麼沒用，什麼事都做不好。',
+      '承接：你現在對自己很失望，那個失望是真的。',
+      '改寫：我這次沒把事情做好，有點挫折，我需要一點時間再試一次。',
+      '小步：今晚先把今天做到的一件小事寫下來，不加評價。',
+      '',
+      '使用者：你真的很煩，我不想再看到你。',
+      '承接：你真的被消耗到很想逃開，那個煩是真的。',
+      '改寫：我現在需要一點空間，等我整理好再跟你說。',
+      '小步：今晚先離線半小時，不回應任何訊息。',
       '',
       '【絕對禁止】',
       '- 禁止把原句的毒話再說一次（不要重複罵人的字眼）',
@@ -172,10 +187,10 @@ function parseThreeParts(raw) {
     try {
       const o = JSON.parse(jsonMatch[0]);
       const accept = o.承接 ?? o.accept;
-      const goodword = o.好話 ?? o.goodword;
+      const goodword = o.好話 ?? o.goodword ?? o.改寫 ?? o.rewrite;
       const smallstep = o.小步 ?? o.smallstep;
       if (accept && goodword) {
-        return { 承接: cleanLine(accept), 好話: cleanLine(goodword), 小步: cleanLine(smallstep || '') };
+        return { 承接: cleanLine(accept), 好話: cleanLine(goodword), 小步: cleanLine(smallstep || ''), 改寫: cleanLine(o.改寫 ?? o.rewrite ?? '') };
       }
     } catch { /* 繼續走文字解析 */ }
   }
@@ -189,13 +204,16 @@ function parseThreeParts(raw) {
   };
 
   const accept = grab(['承接', 'accept', '聽懂', '接住']);
-  const goodword = grab(['好話', 'goodword', '好話一句']);
+  // 改寫模式會用「改寫：」這個標籤；兩種都收（舊版模型輸出「好話：」也相容）
+  const rewriteLine = grab(['改寫', 'rewrite', '可以這樣說', '換句話說']);
+  const goodword = rewriteLine || grab(['好話', 'goodword', '好話一句']);
   const smallstep = grab(['小步', 'smallstep', '小行動', '行動', '下一步']);
 
   if (accept && goodword) {
     return {
       承接: accept,
       好話: goodword,
+      改寫: rewriteLine || '',
       小步: smallstep || '今晚先做一件小事：喝一杯水，然後在十一點前躺下。',
     };
   }
@@ -419,6 +437,13 @@ async function generate(text, opts = {}) {
     const r = rulesRespond(text, { mode });
     r.meta.elapsedMs = Date.now() - t0;
     r.meta.mode = mode;
+    // 改寫模式：規則引擎也要回「原句 / 改寫句」，行為才與模型軌一致
+    if (mode === 'rewrite') {
+      r.original = String(text || '').trim().slice(0, 200);
+      r.rewrite = r.goodword;
+      r.meta.rewriteChecked = true;
+      r.meta.rewriteFallback = true;
+    }
     return r;
   };
 
@@ -458,6 +483,29 @@ async function generate(text, opts = {}) {
     return r;
   }
 
+  // ── 改寫模式：驗證「這到底有沒有改寫」──
+  //   2026-11 使用者反映「改寫一句重話，AI 回的不太對、沒有改寫」。
+  //   實測：模型常常回成空泛的自我鼓勵（例：原句「我怎麼這麼沒用」→
+  //   「我正在學習，每一次嘗試都是經驗的累積」），完全沒有改寫到那句話。
+  //   這裡做兩件事：① 檢查改寫句是否真的與原句有關（共用內容字）② 不合格就用
+  //   rules.respondRewrite()（人工寫好的改寫表 + 絕對化軟化）當確定性退路。
+  let rewriteInfo = null;
+  if (mode === 'rewrite') {
+    const candidate = used.parts.改寫 || used.parts.好話 || '';
+    const check = isRealRewrite(text, candidate);
+    if (check.ok) {
+      rewriteInfo = { text: candidate, fallback: false, overlap: check.overlap };
+    } else {
+      const fb = rulesRespond(text, { mode: 'rewrite' });
+      pushLog(`rewrite 驗證未通過（${check.reason}）→ 改用規則式改寫`);
+      rewriteInfo = { text: fb.goodword, fallback: true, reason: check.reason, overlap: check.overlap };
+      used.parts = { 承接: fb.accept, 好話: fb.goodword, 小步: fb.smallstep };
+      used.engine = 'rules';
+      used.model = null;
+      used.rewriteFallback = true;
+    }
+  }
+
   // 用模型的三段 + 規則引擎的情緒標籤（標籤是確定性的，不讓模型自己編）
   const result = {
     crisis: false,
@@ -477,12 +525,54 @@ async function generate(text, opts = {}) {
       engine: used.engine || 'ollama',
       model: used.model,
       mode,
-      degraded: false,
-      degradedReason: null,
+      degraded: Boolean(used.rewriteFallback),
+      degradedReason: used.rewriteFallback ? '改寫驗證未通過，改用規則式改寫' : null,
       elapsedMs: Date.now() - t0,
+      rewriteChecked: mode === 'rewrite' ? true : undefined,
+      rewriteFallback: mode === 'rewrite' ? Boolean(used.rewriteFallback) : undefined,
     },
   };
+  // 改寫模式：明確回一個「改寫後的句子」欄位，前端才能把它跟原句並排顯示
+  if (mode === 'rewrite' && rewriteInfo) {
+    result.original = String(text || '').trim().slice(0, 200);
+    result.rewrite = rewriteInfo.text;
+    result.goodword = rewriteInfo.text;   // 相容：牆／分享文字仍用 goodword
+    result.meta.rewriteOverlap = rewriteInfo.overlap;
+  }
   return result;
+}
+
+/**
+ * 「這句到底有沒有改寫到原句？」的檢查（改寫模式專用）。
+ *
+ * 判準（寬鬆但足以擋掉空泛雞湯）：
+ *   1. 長度 6–70 字
+ *   2. 與原句共用 ≥2 個「內容字」（去掉我／你／是／的…這類停用字），
+ *      或共用 1 個內容字且句中出現明確的需要語彙（我需要／我想要／我希望／我覺得）
+ *   3. 不是純粹的空泛鼓勵（「你很棒」「一切都會好」這類）
+ *
+ * 回 { ok, overlap, reason }
+ */
+function isRealRewrite(original, candidate) {
+  const cand = String(candidate || '').trim();
+  if (!cand) return { ok: false, overlap: 0, reason: '沒有改寫句' };
+  if (cand.length < 6) return { ok: false, overlap: 0, reason: '太短' };
+  if (cand.length > 70) return { ok: false, overlap: 0, reason: '太長' };
+  if (/^(你很棒|你好棒|一切都會好|加油|相信自己|你可以的)[！。！\s]*$/.test(cand)) {
+    return { ok: false, overlap: 0, reason: '空泛鼓勵' };
+  }
+  const STOP = new Set('我你他她牠它是不了的嗎呢啊吧就都很也還在有和與跟把被這那會要個一二三四五六七八九十');
+  const chars = (s) => new Set(Array.from(String(s)).filter((c) => /[\u4e00-\u9fff]/.test(c) && !STOP.has(c)));
+  const A = chars(original);
+  const B = chars(cand);
+  let overlap = 0;
+  for (const c of A) if (B.has(c)) overlap++;
+  // 「我需要一點空間」這種把需求說出來的句子，即使只共用 1 個內容字也算真改寫；
+  // 但「今天/這次」太泛，不能單獨當作關聯證據（實測會誤收不相干的句子）。
+  const hasNeed = /我(現在|真的|其實)?(需要|想要|希望|覺得|會試|想)/.test(cand);
+  if (overlap >= 2) return { ok: true, overlap, reason: '' };
+  if (overlap >= 1 && hasNeed) return { ok: true, overlap, reason: '' };
+  return { ok: false, overlap, reason: `與原句關聯不足（共用內容字 ${overlap} 個）` };
 }
 
 /** 雲端第八軌的輸出也用同一套模板轉送（避免兩條路徑行為不一致） */
@@ -495,6 +585,7 @@ module.exports = {
   buildShare: buildShareWithTone,
   toCopyText,
   parseThreeParts,
+  isRealRewrite,
   stripThink,
   buildSystemPrompt,
   ollamaAlive,

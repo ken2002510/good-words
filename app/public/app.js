@@ -27,6 +27,8 @@
     alts: $('emotion-alts'),
     accept: $('seg-accept'),
     good: $('seg-good'),
+    goodLabel: $('seg-good-label'),
+    original: $('seg-original'),
     step: $('seg-step'),
     engineNote: $('engine-note'),
     sharePanel: $('share-panel'),
@@ -233,6 +235,10 @@
   }
 
   function twoLine(r) {
+    // 改寫模式：使用者要的是「可以直接送出去的那一句」，複製就只給改寫句
+    if (r.rewrite || (r.meta && r.meta.mode === 'rewrite')) {
+      return r.rewrite || r.goodword || '';
+    }
     var out = [];
     if (r.accept) out.push('承接：' + r.accept);
     if (r.goodword) out.push('好話：' + r.goodword);
@@ -347,6 +353,26 @@
     el.good.textContent = data.goodword || '';
     el.step.textContent = data.smallstep || '';
     el.engineNote.textContent = engineLabel(data.meta);
+
+    // 改寫模式：把「好話」那段換成「你原本說的 → 可以改成」的對照。
+    // （使用者回報「沒有改寫」的另一半原因：舊版把改寫句混在好話裡，看不出是改寫）
+    var isRewrite = data.mode === 'rewrite' || Boolean(data.rewrite)
+      || Boolean(data.meta && data.meta.mode === 'rewrite');
+    if (isRewrite) {
+      el.goodLabel.textContent = '可以改成';
+      var orig = data.original || (el.input ? el.input.value : '') || '';
+      if (orig) {
+        el.original.hidden = false;
+        el.original.textContent = '你原本說的：' + orig;
+      } else {
+        el.original.hidden = true;
+        el.original.textContent = '';
+      }
+    } else {
+      el.goodLabel.textContent = '好話';
+      el.original.hidden = true;
+      el.original.textContent = '';
+    }
 
     el.sharePanel.hidden = true;
     el.crisis.hidden = true;

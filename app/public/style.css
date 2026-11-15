@@ -454,6 +454,14 @@ textarea:focus {
   background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-sm);
   display: flex; flex-direction: column; gap: 2px;
 }
+/* 改寫模式：原句（低調、刪節線）放在「可以改成」的改寫句上面，形成對照 */
+.seg-original {
+  margin: 0 0 6px; font-size: 13.5px; line-height: 1.5;
+  color: var(--ink-faint); text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--ink-faint) 55%, transparent);
+  word-break: break-word;
+}
+
 .me-num { font-size: 22px; font-weight: 700; color: var(--ink); }
 .me-num.me-title { font-size: 15px; color: var(--accent); padding-top: 4px; }
 /* 本週分數為 0 時改顯示「本週還沒開始」，不要讓 0 看起來像成績 */

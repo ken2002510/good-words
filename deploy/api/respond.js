@@ -94,6 +94,9 @@ function shape(result) {
     accept: result.accept || '',
     goodword: result.goodword || '',
     smallstep: result.smallstep || '',
+    // 改寫模式專用：原句與改寫後的句子（前端要並排顯示，不能被 shape 濾掉）
+    original: result.original || undefined,
+    rewrite: result.rewrite || undefined,
     resources: result.resources || null,
     meta: result.meta || { engine: 'rules', model: null, degraded: true, elapsedMs: 0 },
   };
