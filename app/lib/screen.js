@@ -190,17 +190,21 @@ function sanitizeItemId(id) {
  */
 function anonHandle(anon) {
   const s = String(anon || '');
-  const secret = process.env.HANDLE_SECRET || process.env.WALL_ADMIN_TOKEN || '';
-  if (secret && s) {
-    try {
-      const crypto = require('crypto');
-      // 2026-11 複測 v2：4 碼 hex 只有 65,536 種，比舊版 base36 還小 → 碰撞率反而升高。
-      // 改成 8 碼 hex（4.3e9 種），對匿名牆足夠。
-      const h = crypto.createHmac('sha256', secret).update(s).digest('hex').slice(0, 8).toUpperCase();
-      return '牆友#' + h;
-    } catch (e) { /* 落到下面的舊行為 */ }
+  if (!s) return '牆友#--------';
+  try {
+    const crypto = require('crypto');
+    const secret = process.env.HANDLE_SECRET || process.env.WALL_ADMIN_TOKEN || '';
+    // 2026-11 複測 v2 兩點：① 4 碼 hex（65,536）比舊版 base36 還小 → 碰撞率升高；
+    // ② 沒設 HANDLE_SECRET 時退回「anon 後 4 碼」→ 可預測、可冒充。
+    // 因此**一律用雜湊**：有密鑰用 HMAC，沒密鑰用 sha256＋固定鹽（仍然不可由 handle 反推
+    // anon，也不會與他人碰撞），一律取 8 碼 hex。
+    const h = secret
+      ? crypto.createHmac('sha256', secret).update(s).digest('hex')
+      : crypto.createHash('sha256').update('good-words|' + s).digest('hex');
+    return '牆友#' + h.slice(0, 8).toUpperCase();
+  } catch (e) {
+    return '牆友#' + s.slice(-4).toUpperCase();
   }
-  return '牆友#' + s.slice(-4).toUpperCase();
 }
 
 /** Asia/Taipei 的 ISO 週 key，例如 2026-W45 */

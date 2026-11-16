@@ -209,8 +209,11 @@ console.log('\n== 匿名 handle：不可由 anon 反推／不可冒充 ==');
   for (let i = 0; i < 500; i++) many.add(screen.anonHandle('anon-' + i));
   ok('500 個 anon 的碰撞 < 5 個（16^4 空間）', 500 - many.size < 5, '碰撞=' + (500 - many.size));
   delete process.env.HANDLE_SECRET;
-  ok('沒設 HANDLE_SECRET 時退回舊行為（不壞掉）',
-    screen.anonHandle('spoof-xxxx-I-A1').endsWith('I-A1'));
+  const noSecret = screen.anonHandle('spoof-xxxx-I-A1');
+  ok('沒設 HANDLE_SECRET 時仍用雜湊（不再等於 anon 後 4 碼）',
+    !noSecret.endsWith('I-A1') && /^牆友#[0-9A-F]{8}$/.test(noSecret), 'handle=' + noSecret);
+  ok('沒有密鑰時同一 anon 仍然穩定', screen.anonHandle('abc') === screen.anonHandle('abc'));
+  ok('沒有密鑰時不同 anon 不碰撞', screen.anonHandle('abc') !== screen.anonHandle('abd'));
 }
 
 console.log('\n================ 個資/危機回歸測試 ================');
