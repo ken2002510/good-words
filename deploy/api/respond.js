@@ -87,6 +87,30 @@ async function readBody(req) {
 }
 
 /** 保證回應的形狀永遠一致（前端不必特判任何情況） */
+/**
+ * 對外的 meta：只留「行為」與中性分層，**不回廠商與模型名稱**。
+ *
+ * 2026-11 複測 v2：/api/health 修好了，但同一資訊換到 /api/respond 仍可取
+ * （meta.model = nvidia/nemotron-3.5-bolt-e4b、engine = nvidia）→ 只修一半。
+ * 現在 engine 只在白名單內給出「哪一軌」，模型名一律不回；另外給一個中性 provider 分層。
+ */
+function publicMeta(meta) {
+  const m = meta || {};
+  const engine = ['rules', 'ollama', 'nvidia', 'cloud', 'safety'].includes(m.engine) ? m.engine : 'rules';
+  return {
+    engine,
+    provider: engine === 'nvidia' || engine === 'cloud' ? 'cloud'
+      : (engine === 'ollama' ? 'local' : (engine === 'safety' ? 'builtin' : 'builtin')),
+    degraded: Boolean(m.degraded),
+    degradedReason: m.degradedReason || null,
+    elapsedMs: Number(m.elapsedMs) || 0,
+    mode: m.mode || 'chat',
+    rewriteChecked: m.rewriteChecked,
+    rewriteFallback: m.rewriteFallback,
+    rewriteOverlap: m.rewriteOverlap,
+  };
+}
+
 function shape(result) {
   return {
     crisis: Boolean(result.crisis),
@@ -98,7 +122,7 @@ function shape(result) {
     original: result.original || undefined,
     rewrite: result.rewrite || undefined,
     resources: result.resources || null,
-    meta: result.meta || { engine: 'rules', model: null, degraded: true, elapsedMs: 0 },
+    meta: publicMeta(result.meta),
   };
 }
 
@@ -186,9 +210,7 @@ module.exports = async (req, res) => {
       ]);
       const out = shape(result);
       out.meta.deploy = {
-        engine: out.meta.engine,
-        forced: force || deployForce(),
-        note: 'Vercel serverless：有 NVIDIA key 走雲端 LLM 軌，否則走規則式；逾時一律降級規則式',
+        note: 'Vercel serverless：有雲端 LLM 金鑰走雲端軌，否則走規則式；逾時一律降級規則式',
       };
       return res.status(200).json(out);
     } catch (err) {

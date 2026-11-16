@@ -132,6 +132,28 @@ server.listen(0, '127.0.0.1', async () => {
     ok('chat 三段齊全', Boolean(r.accept && r.goodword && r.smallstep));
   }
 
+  console.log('\n== /api/respond 的 meta 不可洩漏廠商與模型名稱（複測 v2）==');
+  {
+    const handler = require(path.resolve(__dirname, '..', 'deploy', 'api', 'respond.js'));
+    const res = {
+      code: 0, payload: null,
+      setHeader() {}, status(c) { this.code = c; return this; },
+      json(o) { this.payload = o; return this; }, end() { return this; },
+    };
+    await handler({
+      method: 'POST', url: '/api/respond', headers: { 'content-type': 'application/json' },
+      body: { text: '今天開會我講錯話，覺得自己很沒用。', mode: 'rewrite', force: 'rules' },
+    }, res);
+    const meta = (res.payload && res.payload.meta) || {};
+    ok('meta 不再回 model 欄位', !('model' in meta), JSON.stringify(meta));
+    ok('meta 有中性 provider 分層', typeof meta.provider === 'string' && meta.provider.length > 0, JSON.stringify(meta));
+    ok('meta.engine 仍在白名單內', ['rules', 'ollama', 'nvidia', 'cloud', 'safety'].includes(meta.engine), String(meta.engine));
+    ok('整體回應不含任何模型名稱字樣', !/nemotron|bolt-e4b|gpt|claude|gemini|llama/i.test(JSON.stringify(res.payload)),
+      JSON.stringify(res.payload).slice(0, 160));
+    ok('改寫欄位仍正常（original + rewrite）', Boolean(res.payload.original && res.payload.rewrite),
+      JSON.stringify({ o: res.payload.original, w: res.payload.rewrite }));
+  }
+
   server.close();
   console.log('\n================ 改寫模式回歸測試 ================');
   console.log('PASS ' + pass + ' / FAIL ' + fail);

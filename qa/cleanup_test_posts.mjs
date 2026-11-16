@@ -20,8 +20,6 @@
  * 退出碼：0 成功；2 環境變數缺失；3 伺服器回非 2xx。
  */
 
-const BASE = (process.env.WALL_BASE_URL || 'https://good-words.vercel.app').replace(/\/+$/, '');
-const TOKEN = process.env.WALL_ADMIN_TOKEN || '';
 const argv = process.argv.slice(2);
 const has = (f) => argv.some((a) => a === f || a.startsWith(f + '='));
 const val = (f, d = '') => {
@@ -29,10 +27,27 @@ const val = (f, d = '') => {
   return hit ? hit.slice(f.length + 1) : d;
 };
 const YES = has('--yes');
+/** --list：不需要權杖，只讀牆列表看有幾篇（用來確認清理前後） */
+const LIST_ONLY = has('--list');
 
-if (!TOKEN) {
-  console.error('!! 缺少 env WALL_ADMIN_TOKEN（要和 Vercel 專案裡的設定一致）');
-  console.error('   PowerShell: $env:WALL_ADMIN_TOKEN = "<token>"');
+const BASE = (val('--base') || process.env.WALL_BASE_URL || 'https://good-words.vercel.app')
+  .replace(/\/+$/, '');
+const TOKEN = val('--token') || process.env.WALL_ADMIN_TOKEN || '';
+
+if (!TOKEN && !LIST_ONLY) {
+  console.error('!! 沒有權杖。兩種給法（擇一）：');
+  console.error('   1) 環境變數（PowerShell）：$env:WALL_ADMIN_TOKEN = "<真正的權杖>"');
+  console.error('   2) 參數：node qa/cleanup_test_posts.mjs --token=<真正的權杖>');
+  console.error('');
+  console.error('   權杖必須與 Vercel 專案 → Settings → Environment Variables 的');
+  console.error('   WALL_ADMIN_TOKEN 完全相同，而且設定後要「重新部署」才會生效。');
+  console.error('   沒有權杖時可以先看牆上現況：node qa/cleanup_test_posts.mjs --list');
+  process.exit(2);
+}
+if (TOKEN === '<你設的權杖>' || TOKEN === '<token>' || /^<.*>$/.test(TOKEN)) {
+  console.error('!! 你填的是說明文字裡的佔位字串（例如 <你設的權杖>），不是真正的權杖。');
+  console.error('   請自己產生一組並填進 Vercel，例如 PowerShell：');
+  console.error("   $tok = -join ((48..57)+(97..102) | Get-Random -Count 32 | ForEach-Object {[char]$_}); $tok");
   process.exit(2);
 }
 
@@ -49,7 +64,27 @@ async function call(qs) {
   return { status: res.status, body };
 }
 
+/** --list：不需要權杖，只讀牆列表（清理前後對照用） */
+async function listWall() {
+  console.log('目標：' + BASE);
+  console.log('模式：只讀列表（--list，不需要權杖）');
+  const res = await fetch(BASE + '/api/wall', { headers: { 'User-Agent': 'cleanup-script' } });
+  const body = await res.json().catch(() => null);
+  if (!body || !body.ok) {
+    console.error('!! 讀取失敗 HTTP ' + res.status);
+    process.exit(3);
+  }
+  const items = body.items || [];
+  console.log('牆上篇數：' + items.length + '（wallEnabled=' + body.wallEnabled + '）');
+  items.slice(0, 40).forEach((it, i) => {
+    const encs = (it.encs || []).length;
+    console.log(`  ${String(i + 1).padStart(2)}. ${it.id.slice(0, 8)}…  ${encs} 句鼓勵  「${String(it.text || '').slice(0, 28)}」`);
+  });
+  console.log('\n（把測試資料清掉請用：node qa/cleanup_test_posts.mjs --token=<權杖> 先 dry-run，再加 --yes）');
+}
+
 async function main() {
+  if (LIST_ONLY) return listWall();
   console.log('目標：' + BASE);
   console.log('模式：' + (YES ? '實際刪除' : 'DRY-RUN（只列出，不動資料）'));
 

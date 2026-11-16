@@ -1038,17 +1038,8 @@
   loadBoard();
   loadMeWall();
 
-  // 顯示引擎狀態（讓評審看到 AI 真的在跑；不揭露任何個資）
-  fetch('/api/health').then(function (r) { return r.json(); }).then(function (h) {
-    var eng = (h.engines) || {};
-    var o = eng.ollama;
-    var n = eng.nvidia;
-    if (o && o.alive) {
-      el.input.setAttribute('placeholder',
-        '把心裡的話寫下來，不用修飾。（本機 AI 已就緒：' + (o.model || '') + '）');
-    } else if (n && n.enabled) {
-      el.input.setAttribute('placeholder',
-        '把心裡的話寫下來，不用修飾。（雲端 AI 已就緒：' + (n.model || 'NVIDIA NIM') + '）');
-    }
-  }).catch(function () { /* 不重要，失敗就算了 */ });
+  // 2026-11 複測 v2：這裡原本讀 /api/health 的 engines 並「覆寫輸入框 placeholder」。
+  // 那會 (1) 把模型名稱顯示在畫面上 (2) 蓋掉改寫模式的專屬提示文字。
+  // /api/health 不再回 engines 之後它變成死碼（缺陷只是潛伏），所以直接移除。
+  // 輸入框提示一律由上面的 PLACEHOLDER[mode] 決定，不依賴任何遠端資訊。
 })();

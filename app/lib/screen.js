@@ -57,6 +57,19 @@ function screenPlain(text) {
   return String(text || '').normalize('NFKC').replace(INVISIBLE_RE, '').toLowerCase();
 }
 
+/**
+ * 寬鬆數字比對用的 pattern 工廠（2026-11 複測 v2 新發現：emoji 夾雜可繞過）。
+ * `0912😢345😢678` 這種在數字之間插**任何非數字字元**的寫法，前一代的正規化
+ * （只列舉已知分隔符）擋不住。這裡改成「允許中間插入最多 2 個非數字字元」：
+ *   09(?:[^0-9]{0,2}\d){8}      → 手機 09 + 8 碼
+ *   0[2-8](?:[^0-9]{0,2}\d){7,8} → 市話
+ * 為什麼限制「最多 2 個」：不限制的話，「2026 年 11 月，我 35 歲」這種正常句子
+ * 會被串成一長串數字而誤判。實測「年/月/日」等中文字會中斷比對，不會誤擋。
+ */
+function looseDigits(head, tailMin, tailMax) {
+  return new RegExp(`${head}(?:[^0-9]{0,2}\\d){${tailMin},${tailMax}}`);
+}
+
 /** 再去除分隔符（空白、橫線、標點…）——「0912 345 678」→「0912345678」 */
 function screenCompact(text) {
   return screenPlain(text).replace(SEPARATOR_RE, '');
@@ -81,6 +94,10 @@ const PII_PATTERNS = [
   { label: '市話', on: 'compact', re: /(?:^|[^0-9])0[2-8]\d{7,8}(?![0-9])/ },
   // 身分證：一個英文字母 + 1/2 + 8 位數字（全形已在 NFKC 轉掉、空白已去）
   { label: '身分證', on: 'compact', re: /(?:^|[^a-z0-9])[a-z][12]\d{8}(?![0-9])/ },
+  // ── 寬鬆版：數字中間插 emoji／任意符號也算（複測 v2 的繞過）──
+  { label: '電話', on: 'plain', re: looseDigits('(?:^|[^0-9])09', 8, 8) },
+  { label: '市話', on: 'plain', re: looseDigits('(?:^|[^0-9])0[2-8]', 7, 8) },
+  { label: '身分證', on: 'plain', re: looseDigits('[a-z][12]', 8, 8) },
   // 諧音數字（零九一二…／ㄧ二三四…）——只在 homophone 視圖上比對數字型規則
   { label: '電話（諧音）', on: 'homophone', re: /(?:^|[^0-9])(?:09\d{8})(?![0-9])/ },
   { label: '身分證（諧音）', on: 'homophone', re: /(?:^|[^a-z0-9])[a-z][12]\d{8}(?![0-9])/ },
@@ -177,7 +194,9 @@ function anonHandle(anon) {
   if (secret && s) {
     try {
       const crypto = require('crypto');
-      const h = crypto.createHmac('sha256', secret).update(s).digest('hex').slice(0, 4).toUpperCase();
+      // 2026-11 複測 v2：4 碼 hex 只有 65,536 種，比舊版 base36 還小 → 碰撞率反而升高。
+      // 改成 8 碼 hex（4.3e9 種），對匿名牆足夠。
+      const h = crypto.createHmac('sha256', secret).update(s).digest('hex').slice(0, 8).toUpperCase();
       return '牆友#' + h;
     } catch (e) { /* 落到下面的舊行為 */ }
   }
@@ -238,13 +257,33 @@ function findAttack(text) {
  * 貼文審核。回 { ok, reason?, crisis?, text? }
  * 危機內容回 crisis:true —— 呼叫端必須直接轉介、絕對不可寫入任何儲存。
  */
+/**
+ * 這句是「針對別人的辱罵」還是「自己怎麼了」？
+ *
+ * 2026-11 複測 v2：危機判定搶先於攻擊判定，導致罵人的氣話（例：「你他媽的是個白痴廢物，
+ * 去死一死算了」）被當成危機 → 回熱線、還吞掉改寫結果；而同一句話拿掉「去死」就正常 422。
+ * 判定：句中有第二人稱、且攻擊詞出現之前沒有第一人稱 → 視為針對他人的辱罵（走攻擊字）。
+ * 回傳命中的攻擊詞，或 null。
+ */
+function findDirectedAttack(text) {
+  const t = String(text || '');
+  const w = findAttack(t);
+  if (!w) return null;
+  if (!/(你|妳|您|你們)/.test(t)) return null;
+  const before = t.slice(0, Math.max(0, t.indexOf(w)));
+  if (/(我|自己)/.test(before)) return null;   // 「我自己是白痴」→ 不是罵別人
+  return w;
+}
+
 function validatePost(text) {
   const t = String(text || '').trim().slice(0, POST_MAX_LEN);
   if (!t) return { ok: false, reason: '請先寫下一點什麼，一個字也可以。' };
-  if (safety.detectCrisis(t).crisis) return { ok: false, crisis: true };
+  // 針對他人的辱罵優先於危機判定（否則會錯誤地回熱線資源）
+  const directed = findDirectedAttack(t);
+  if (!directed && safety.detectCrisis(t).crisis) return { ok: false, crisis: true };
   const pii = findPII(t);
   if (pii) return { ok: false, reason: '為了保護你，請拿掉' + pii + '（姓名、學校、聯絡方式都不要留）。' };
-  if (findAttack(t)) return { ok: false, reason: '請描述事件本身就好，這裡不掛人身攻擊的內容。' };
+  if (directed || findAttack(t)) return { ok: false, reason: '請描述事件本身就好，這裡不掛人身攻擊的內容。' };
   return { ok: true, text: t };
 }
 
@@ -279,13 +318,15 @@ function bigramOverlap(a, b) {
  */
 function validateEncourage(text, postText) {
   const t = String(text || '').trim().slice(0, ENC_MAX_LEN);
-  // 危機偵測永遠第一優先（連短文也要回轉介，不會被當成普通違規）
-  if (safety.detectCrisis(t).crisis) return { ok: false, crisis: true };
+  // 針對他人的辱罵優先於危機（同 validatePost 的理由）
+  const directed = findDirectedAttack(t);
+  // 危機偵測仍是高優先（連短文也要回轉介），但方向明確的辱罵不該被誤當危機
+  if (!directed && safety.detectCrisis(t).crisis) return { ok: false, crisis: true };
   if (t.length < ENC_MIN_LEN) return { ok: false, reason: '鼓勵至少 ' + ENC_MIN_LEN + ' 個字，告訴對方你聽到了什麼。' };
   if (!/[一-鿿A-Za-z0-9]/.test(t)) return { ok: false, reason: '寫點文字吧，單靠表情符號撐不起一句鼓勵。' };
   const pii = findPII(t);
   if (pii) return { ok: false, reason: '鼓勵裡不要留' + pii + '。' };
-  if (findAttack(t)) return { ok: false, reason: '請用溫柔的話鼓勵，不要罵人。' };
+  if (directed || findAttack(t)) return { ok: false, reason: '請用溫柔的話鼓勵，不要罵人。' };
   const check = rules.lint({ 承接: '', 好話: t, 小步: '' });
   if (!check.ok) return { ok: false, reason: '這句話聽起來有點空洞或刺刺的，換個說法再試試。' };
   if (GENERIC_PRAISE.test(t)) return { ok: false, reason: '這句太空洞了 —— 試試說出你聽到的具體感受。' };
@@ -364,6 +405,7 @@ module.exports = {
   screenCompact,
   screenHomophone,
   findAttack,
+  findDirectedAttack,
   validatePost,
   validateEncourage,
   scoreSpecificity,

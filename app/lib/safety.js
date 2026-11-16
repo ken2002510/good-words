@@ -143,9 +143,18 @@ function comboRisk(n) {
   return null;
 }
 
-/** 正規化：對齊 content/crisis.json 的 normalize 規格 */
+/**
+ * 正規化：對齊 content/crisis.json 的 normalize 規格。
+ *
+ * 2026-11 複測 v2：含 email 的正常句被誤判 crisis。除了英文 pattern 之外，
+ * 這裡先把 email／網址／@帳號整段遮掉再做中文比對 —— 那些字串本來就只是聯絡方式，
+ * 不該參與危機判斷（它們的內容仍然會被 screen.js 的個資規則擋下，不會漏放）。
+ */
 function normalize(text) {
   return String(text || '')
+    .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, ' ')   // email
+    .replace(/https?:\/\/\S+|www\.\S+/gi, ' ')                          // 網址
+    .replace(/@[A-Za-z0-9._-]{3,30}/g, ' ')                             // @帳號
     .replace(/[\uFF01-\uFF5E]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)) // 全形→半形
     .toLowerCase()
     .replace(/[\s\u3000]+/g, '')                        // 去空白

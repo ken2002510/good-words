@@ -158,6 +158,20 @@ async function kvRemoveId(L, id) {
   }
 }
 
+/**
+ * 對外的鼓勵物件：只保留顯示需要的欄位。
+ * 特別注意 anonHash 是伺服器端身分比對用的追蹤鍵，**絕對不可外洩**（複測 v2 抓到）。
+ */
+function publicEnc(e) {
+  return {
+    id: e.id,
+    text: e.text,
+    handle: e.handle,
+    score: e.score,
+    createdAt: e.createdAt,
+  };
+}
+
 function publicItem(L, item, encs) {
   return {
     id: item.id,
@@ -387,19 +401,34 @@ async function addEncourage(L, payload) {
       e.anonHash ? e.anonHash === myHash : e.handle === myHandle
     )));
 
-    // ── 防刷分 ③：每日「能得分的鼓勵篇數」上限（預設 5）──
+    // ── 防刷分 ③：同一個人「同一句話」在同一天內只用一次（跨貼文也算）──
+    //    複測 v2：去重只做了 per-item，換一篇貼文送同一句罐頭仍每次 +7。
+    const textKey = crypto.createHash('sha1').update(norm).digest('hex').slice(0, 16);
+    const seenKey = 'enc:seen:' + myHash + ':' + dayKey;
+    let textSeen = false;
+    try {
+      const seenN = await L.kv.hincrby(seenKey, textKey, 1);
+      await L.kv.expire(seenKey, 2 * 86400);
+      textSeen = Number(seenN) > 1;
+    } catch (_) {
+      textSeen = false; // KV 不支援就不擋（服務可用性優先）
+    }
+
+    // ── 防刷分 ④：每日「能得分的鼓勵篇數」上限（預設 5）──
     const scoreCap = Number(L.screen.LIMITS.ENC_SCORE_PER_DAY) || ENC_SCORE_PER_DAY_DEFAULT;
     const sk = 'rate:encscore:' + anon + ':' + dayKey;
     let scored = 0;
-    if (!alreadyEncouraged) {
+    if (!alreadyEncouraged && !textSeen) {
       const k = await L.kv.incr(sk);
       await L.kv.expire(sk, 2 * 86400);
       scored = k <= scoreCap ? score.total : 0;
     }
 
+    // 2026-11 複測 v2：anonHash 被回在 API 回應裡 → 等於給出一個穩定、完整的跨發文追蹤鍵
+    // （比舊版 4 碼 handle 更適合追蹤）。anonHash 只存內部、**永不出現在任何回應**。
     const enc = {
       id: crypto.randomUUID(), text: v.text, handle: myHandle,
-      anonHash: myHash,      // 伺服器端身分比對用；publicItem 不會輸出這個欄位
+      anonHash: myHash,      // 內部比對用；下面的 publicEnc() 不會輸出
       score: scored, createdAt: Date.now(),
     };
     await L.kv.lpush('wall:item:' + itemId + ':encs', JSON.stringify(enc));
@@ -421,7 +450,7 @@ async function addEncourage(L, payload) {
       body: {
         ok: true, wallEnabled: true, week,
         delta: scored, alreadyEncouraged: alreadyEncouraged || undefined,
-        posterDelta, scoreWhy: score.why, enc,
+        posterDelta, scoreWhy: score.why, enc: publicEnc(enc),
       },
     };
   } catch (err) {

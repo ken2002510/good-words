@@ -110,6 +110,32 @@ const GOOD_ENC = '被這樣念一整晚，心裡一定很委屈，你願意說�
   ok('同一人第二句（不同內容）不再給分', same2.status === 200 && same2.body.delta === 0 && same2.body.alreadyEncouraged === true,
     JSON.stringify(same2.body).slice(0, 140));
 
+  console.log('\n== P1-1b 刷分：同一句話換貼文也不能重複得分（複測 v2 新發現）==');
+  {
+    const other = await core.createPost(L, { anon: 'lead-anon-0002efgh', text: '今天被客戶罵了一頓，覺得很沒價值。' });
+    const canned = '我看到你在努力撐著，這件事真的不容易，你願意說出來很勇敢。';
+    const a1 = await core.addEncourage(L, { anon: 'enc-y-0007mnop', itemId, text: canned });
+    const a2 = await core.addEncourage(L, { anon: 'enc-y-0007mnop', itemId: other.body.item.id, text: canned });
+    ok('第一則貼文同句給分', a1.status === 200 && a1.body.delta > 0, JSON.stringify(a1.body).slice(0, 110));
+    ok('換一則貼文送同一句 → 不再給分（跨貼文去重）',
+      a2.status === 200 && a2.body.delta === 0, JSON.stringify(a2.body).slice(0, 140));
+  }
+
+  console.log('\n== 隱私：回應不可外洩 anonHash（複測 v2 新發現）==');
+  {
+    const e = await core.addEncourage(L, {
+      anon: 'enc-z-0042qrst', itemId,
+      text: '被念的那個當下很難受，但那一句話不等於你這個人沒有價值。',
+    });
+    const txt = JSON.stringify(e.body || {});
+    ok('鼓勵回應不含 anonHash', !/anonHash/.test(txt), txt.slice(0, 200));
+    const wall = await core.listWall(L, {});
+    ok('牆列表不含 anonHash', !/anonHash/.test(JSON.stringify(wall.body)), '');
+    ok('牆列表的鼓勵只含顯示欄位',
+      (wall.body.items[0].encs || []).every((x) => Object.keys(x).every((k) => ['id', 'text', 'handle', 'score', 'createdAt'].includes(k))),
+      JSON.stringify((wall.body.items[0].encs || [])[0] || {}));
+  }
+
   console.log('\n== 排行榜：刷分不再累積 ==');
   const board = await core.leaderboard(L, { anon: 'enc-x-0009abcd' });
   const me = board.body.me;

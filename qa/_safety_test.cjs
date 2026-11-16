@@ -54,6 +54,12 @@ const MUST_BLOCK_PII = [
   ['繞過：空白身分證', '身分證 A123 456 789 被冒用'],
   ['繞過：全形 LINE ID', '我的 ＬＩＮＥ ＩＤ：ａｂｃｄ１２３４'],
   ['繞過：地址省略市名', '我住大安區復興南路二段 123 號，鄰居很吵'],
+  // 2026-11 複測 v2 新發現：emoji／任意符號夾雜（前一代只列舉已知分隔符，擋不住）
+  ['繞過：emoji 夾雜手機', '心情很差，我的號碼是 0912😢345😢678'],
+  ['繞過：emoji＋全形', '我的電話 ０９１２😢３４５😢６７８ 可以打給我'],
+  ['繞過：點號夾雜身分證', '身分證是 A123·456·789，被冒用'],
+  ['繞過：全角減號夾雜', '手機 0912－345－678 沒人接'],
+  ['繞過：每碼間隔符號', '0 9 1 2 - 3 4 5 - 6 7 8'],
 ];
 
 for (const [name, text] of MUST_BLOCK_PII) {
@@ -131,6 +137,29 @@ console.log('\n== 評審指出的兩項誤判 ==');
   const r = safety.detectCrisis(selfHarm);
   ok('第一人稱的「死一死」仍然是危機', r.crisis === true, 'crisis=' + r.crisis);
 }
+// 2026-11 複測 v2：罵人的氣話不該被當危機（危機判定原本搶先於攻擊判定）
+{
+  const insult = '你他媽的是個白痴廢物，去死一死算了';
+  const v = screen.validatePost(insult);
+  ok('罵人氣話 → 不是 crisis（走攻擊字）', v.ok === false && v.crisis !== true,
+    JSON.stringify(v));
+  ok('罵人氣話 → 訊息是「不要人身攻擊」', /人身攻擊/.test(v.reason || ''), JSON.stringify(v.reason));
+  const v2 = screen.validatePost('你去死啦，我不想再跟你說話');
+  ok('「你去死啦」也不會被當危機', v2.ok === false && v2.crisis !== true, JSON.stringify(v2));
+  const enc = screen.validateEncourage(insult, '今天開會被念');
+  ok('鼓勵含罵人氣話 → 不是 crisis', enc.ok === false && enc.crisis !== true, JSON.stringify(enc));
+  const self = screen.validatePost('我真的好想死一死，撐不住了');
+  ok('第一人稱自傷 → 仍然是 crisis', self.ok === false && self.crisis === true, JSON.stringify(self));
+}
+// 2026-11 複測 v2：含 email 的正常句不該被 crisis 攔走（email 已在正規化時遮掉）
+{
+  const withEmail = '我的 email 是 help.me@example.com，想問有沒有相關資源可以看。';
+  const r = safety.detectCrisis(withEmail);
+  ok('含 email 的正常句不是 crisis', r.crisis === false, JSON.stringify(r.matched));
+  const v = screen.validatePost(withEmail);
+  ok('含 email 的正常句 → 422 個資（不是 crisis）', v.ok === false && v.crisis !== true && /email/.test(v.reason || ''),
+    JSON.stringify(v));
+}
 
 // ───────────────────────────────────────── 走完整審核流程
 console.log('\n== validatePost 端到端（危機 > 個資 > 攻擊 的順序）==');
@@ -157,6 +186,9 @@ const NUMBER_BUT_FINE = [
   '大概 10 分鐘後又要進會議室。',
   '第 12 次了，每次都被同一句話刺到。',
   '2026 年開始，我想試著對自己好一點。',
+  // 複測 v2：寬鬆數字比對不可把「日期＋年齡」這類正常數字串成電話
+  '2026 年 11 月，我 35 歲，覺得時間過得好快。',
+  '今天 12 點 30 分開會，我被念了 10 分鐘。',
 ];
 for (const text of NUMBER_BUT_FINE) {
   const label = screen.findPII(text);
@@ -169,7 +201,8 @@ console.log('\n== 匿名 handle：不可由 anon 反推／不可冒充 ==');
   process.env.HANDLE_SECRET = 'test-secret-for-regression';
   const me = screen.anonHandle('spoof-xxxx-I-A1');
   ok('handle 不再等於 anon 後 4 碼', !me.endsWith('I-A1'), 'handle=' + me);
-  ok('handle 格式仍為 牆友#XXXX', /^牆友#[0-9A-F]{4}$/.test(me), 'handle=' + me);
+  // 複測 v2：4 碼 hex（65,536）比舊版 base36 小 → 碰撞率升高，改成 8 碼
+  ok('handle 格式為 牆友#8 碼 hex', /^牆友#[0-9A-F]{8}$/.test(me), 'handle=' + me);
   ok('同一 anon → 穩定同一個 handle', screen.anonHandle('abc') === screen.anonHandle('abc'));
   ok('不同 anon → 不同 handle', screen.anonHandle('abc') !== screen.anonHandle('abd'));
   const many = new Set();
